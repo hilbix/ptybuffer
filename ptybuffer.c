@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.3  2004-05-20 04:22:22  tino
+ * Revision 1.4  2004-05-20 04:59:00  tino
+ * master can be 0, which closes stdin.  close in the slave part removed.
+ *
+ * Revision 1.3  2004/05/20 04:22:22  tino
  * Forgot to add the initial poll to the new socket
  *
  * Revision 1.2  2004/05/20 02:05:43  tino
@@ -421,8 +424,6 @@ main(int argc, char **argv)
        * and all other not needed file descriptors.
        * Then exec the wanted program
        */
-      if (master>=0)
-	close(master);
       close(sock);
       close(fd);
 #ifndef DEBUG_INTERACTIVE
