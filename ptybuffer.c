@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.2  2004-05-20 02:05:43  tino
+ * Revision 1.3  2004-05-20 04:22:22  tino
+ * Forgot to add the initial poll to the new socket
+ *
+ * Revision 1.2  2004/05/20 02:05:43  tino
  * History now has a define and is 1000 lines, not 10 like for testing
  *
  * Revision 1.1  2004/05/19 20:22:30  tino
@@ -323,7 +326,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	return -1;
       buf	= tino_alloc0(sizeof *buf);
       buf->p	= tino_sock_user(sock);
-      tino_sock_new_fd(fd, connect_process, buf);
+      tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
     case TINO_SOCK_PROC_CLOSE:
       break;
     }
