@@ -1,6 +1,9 @@
 2004-05-23    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (main): cd /
+	(sock_process, master_process, deamonloop): on close the socket is
+	destroyed and freed, so I cannot check against the file
+	descriptor.  Close-handling corrected.
 
 2004-05-22    <tino@firebird.03.softkill.net>
 

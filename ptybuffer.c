@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.6  2004-05-23 10:12:23  tino
+ * Revision 1.7  2004-05-23 12:22:21  tino
+ * closedown problem in ptybuffer elliminated
+ *
+ * Revision 1.6  2004/05/23 10:12:23  tino
  * new upload for NWNadm
  *
  * Revision 1.5  2004/05/21 02:23:35  tino
@@ -241,14 +244,15 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
     tino_glist_free(tino_glist_get(p->screen));
   switch (type)
     {
+    case TINO_SOCK_PROC_CLOSE:
+      xDP(("master_process() CLOSE"));
+      FATAL(sock!=p.pty);
+      p.pty	= 0;
+      return TINO_SOCK_CLOSE;
+
     case TINO_SOCK_PROC_EOF:
       xDP(("master_process() EOF"));
       return TINO_SOCK_ERR;
-
-    case TINO_SOCK_PROC_CLOSE:
-      xDP(("master_process() FREE"));
-      close(tino_sock_fd(sock));
-      return TINO_SOCK_CLOSE;
 
     case TINO_SOCK_PROC_POLL:
       xDP(("master_process() poll %d", p->send->count));
@@ -324,6 +328,12 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
   xDP(("sock_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
   switch (type)
     {
+    case TINO_SOCK_PROC_CLOSE:
+      xDP(("sock_process() CLOSE"));
+      FATAL(sock!=p.sock);
+      p.sock	= 0;
+      return TINO_SOCK_CLOSE;
+      
     case TINO_SOCK_PROC_EOF:
     case TINO_SOCK_PROC_POLL:
       xDP(("sock_process() ACCEPT"));
@@ -340,7 +350,6 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       buf	= tino_alloc0(sizeof *buf);
       buf->p	= tino_sock_user(sock);
       tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
-    case TINO_SOCK_PROC_CLOSE:
       break;
     }
   xDP(("sock_process() end"));
@@ -361,7 +370,7 @@ deamonloop(int sock, int master)
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
   work.forcepoll	= 1;
-  while (tino_sock_fd(work.pty)>=0 && tino_sock_fd(work.sock)>=0)
+  while (work.pty && work.sock)
     {
       int	tmp;
 
