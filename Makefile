@@ -1,7 +1,10 @@
 # $Header$
 #
 # $Log$
-# Revision 1.1  2004-05-19 20:23:43  tino
+# Revision 1.2  2004-05-21 10:40:03  tino
+# -lefence
+#
+# Revision 1.1  2004/05/19 20:23:43  tino
 # first commit
 #
 
@@ -9,7 +12,7 @@
       PROGS=$(PROG)
        OBJS=
      CFLAGS=-g -Wall -O3
-    LDFLAGS=-lutil
+    LDFLAGS=-lutil #-lefence
 VERSIONFILE=$(PROG)_version
 VERSIONNAME=$(PROG)_VERSION
      COMMON=Makefile tino_common.h tino/lib.h $(VERSIONFILE).h
@@ -29,7 +32,7 @@ clean:
 
 distclean:	clean
 	$(MAKE) -C tino distclean
-	$(RM) $(VERSIONFILE).h
+	$(RM) $(VERSIONFILE).h core core.*
 
 dist:	distclean
 	$(MAKE) -C tino dist
