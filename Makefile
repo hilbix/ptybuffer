@@ -1,7 +1,10 @@
 # $Header$
 #
 # $Log$
-# Revision 1.2  2004-05-21 10:40:03  tino
+# Revision 1.3  2004-05-21 11:17:22  tino
+# added
+#
+# Revision 1.2  2004/05/21 10:40:03  tino
 # -lefence
 #
 # Revision 1.1  2004/05/19 20:23:43  tino
@@ -28,7 +31,7 @@ tino/lib.h:
 
 clean:
 	$(MAKE) -C tino clean
-	$(RM) $(PROGS) *.o *~ sock sock.tmp
+	$(RM) $(PROGS) *.o *~ */*~ sock sock.tmp
 
 distclean:	clean
 	$(MAKE) -C tino distclean
