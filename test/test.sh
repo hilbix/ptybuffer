@@ -7,15 +7,17 @@
 # rm -f sock.tmp; ptybuffer sock.tmp ./test.sh
 #
 # Then run a program capable to connect to the unix socket, sock.tmp:
-# access ">sock.tmp"
+# accept ">sock.tmp"
 #
-# You can find access-2.x where you found ptybuffer:
+# You can find accept-2.x where you found ptybuffer:
 # http://www.scylla-charybdis.com/download/
 #
 # $Log$
-# Revision 1.1  2004-05-19 20:22:23  tino
-# Test script added
+# Revision 1.2  2004-05-20 02:03:59  tino
+# typo corrected
 #
+# Revision 1.1  2004/05/19 20:22:23  tino
+# Test script added
 
 while date
 do
