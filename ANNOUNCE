@@ -1,15 +1,1 @@
-Logfiles, can run in foreground, options added and minor bugfix
-
-WARNING!  Version is nearly untested.
-
-ptybuffer was extended to accept options.  It now can run from
-/etc/inittab or deamontools and has support to write logfiles, too.
-Please see the help which comes when ptybuffer is called without any
-argument.
-
-A little bug was fixed which could cause data transferred to the
-terminal to wait in ptybuffer until new data arrives to the terminal.
-
-Additional note: The NWNadm part in this version was removed.  It will
-show up as an independent package in future.
-
+Corrected bug when daemonizing and options -o and -l were not given
