@@ -1,0 +1,17 @@
+2004-05-21    <tino@firebird.03.softkill.net>
+
+	* stress.sh: Well, there is a strange bug.  The stress.sh script
+	only loops less than 1000 times.  Looking why.  Note that you need
+	my "accept" to be reachable in path to use the stress script.
+	Weird.  I cannot prove the problem under RedHat 9 on my 466 MHz
+	Celeron develop machine.  However on one of my fast SuSE 9 servers
+	it segfaults within seconds.  Oh well, thanks to gdb, I see
+	.. it's a memory issue, realloc cores, sigh.  OK, setting
+	environment variable MALLOC_CHECK_=1 shows that I have some
+	serious memory corruption, hunting down .. Found with -lefence.
+
+	* ptybuffer.c (master_process): on CLOSE we need to close the
+	master, not free the user pointer.  Just cosmetic, as when the
+	master closes everything will terminate anyway.
+
+	* ChangeLog: started
