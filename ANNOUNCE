@@ -1,4 +1,4 @@
-Release without ECHO_SEND and NWNadm 2.4
+Release with closedown bugfix, ECHO_SEND disabled and NWNadm 2.4
 
 NWNadm is tightly bound to the ptybuffer source.
 It basically works without my "accept" tool,
