@@ -5,13 +5,19 @@ Tired reading docs?
 
 make
 ./ptybuffer
-head test.sh
+head test/test.sh
 
 
 Changes
 =======
 
-2004-05-19 0.1.0	initial version
+2004-10-23 0.3.0	Options, minor bugfix, restructuring contents
+2004-07-05 0.2.4	NWNadm 2.6.2
+2004-06-13 0.2.3	fix in socket implementation
+2004-06-03 0.2.2	NWNadm updates	
+2004-05-21 0.2.1	memory corruption fix
+2004-05-20 0.2.0	nwn directory
+2004-05-20 0.1.0	initial version
 
 
 ptybuffer
@@ -21,11 +27,13 @@ WARNING!  THIS IS RELEASE EARLY CODE!
 
 ptybuffer does following:
 
-- Deamonizes the process (arg2 and above) with a pty such that stdlib
+- Daemonizes (if option -d is not present), else runs in foreground
+
+- Calls a process (arg2 and above) with a pty such that stdlib
   usually makes output line buffered.
 
 - Gathers the output history of the pty for later view.  Currently
-  this is 1000 reads (not neccessarily lines).
+  this is 1000 reads (not neccessarily lines, see option -n).
 
 - Waits for connects to the unix socket (command line argument 1)
 
@@ -66,14 +74,14 @@ This has several improvements over screen:
 Bugs:
 =====
 
-- ptybuffer does not unlink() the socket.  So you have to delete it
-  first, else ptybuffer will bail out.
+- ptybuffer does not unlink() the socket if option -f and -c are
+  missing.  This is a feature.
 
 - The program running under pty control is not considered to stop.  If
   this ever happens, ptybuffer just exits without making sure that all
   data is sent to connected sockets.
 
-- It has not been tested much.
+- New version have not been tested much before release.
 
 - If you send data to ptybuffer and close the socket very fast, the
   EOF on the write side closes the socket before everything can be
@@ -88,14 +96,14 @@ Bugs:
 Example:
 ========
 
-See introductory comment in test.sh
+See introductory comment in test/test.sh
 
 For a PHP usage example see the nwn/ subdirectory (footnote [0])
 
 You need a program capable to send data to unix sockets to test
 ptybuffer.  The only two programs I know to be capable of this easily
 is netpipes and my utility accept (version 2), see
-http://www.scylla-charybdis.com/ in the tools section.
+http://www.scylla-charybdis.com/tools.html in the (old) tools section.
 
 
 Install:
@@ -144,9 +152,8 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.2  2004-05-20 09:53:11  tino
+Revision 1.3  2004-10-22 01:12:23  tino
+now reflects the new options
+
+Revision 1.2  2004/05/20 09:53:11  tino
 release texts
-
-Revision 1.1  2004/05/20 02:06:52  tino
-added
-
