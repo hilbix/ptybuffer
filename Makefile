@@ -1,7 +1,10 @@
 # $Header$
 #
 # $Log$
-# Revision 1.3  2004-05-21 11:17:22  tino
+# Revision 1.4  2004-06-12 09:12:12  tino
+# make diff
+#
+# Revision 1.3  2004/05/21 11:17:22  tino
 # added
 #
 # Revision 1.2  2004/05/21 10:40:03  tino
@@ -39,6 +42,9 @@ distclean:	clean
 
 dist:	distclean
 	$(MAKE) -C tino dist
+
+diff:
+	$(MAKE) -C tino diff
 
 install:
 	for a in $(PROGS); do $(RM) "$$HOME/bin/$$a"; \
