@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.7  2004-05-23 12:22:21  tino
+ * Revision 1.8  2004-05-23 12:25:58  tino
+ * Thou shalt not forget to test compile before checkin ;)
+ *
+ * Revision 1.7  2004/05/23 12:22:21  tino
  * closedown problem in ptybuffer elliminated
  *
  * Revision 1.6  2004/05/23 10:12:23  tino
@@ -246,8 +249,8 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
     {
     case TINO_SOCK_PROC_CLOSE:
       xDP(("master_process() CLOSE"));
-      FATAL(sock!=p.pty);
-      p.pty	= 0;
+      FATAL(sock!=p->pty);
+      p->pty	= 0;
       return TINO_SOCK_CLOSE;
 
     case TINO_SOCK_PROC_EOF:
@@ -322,6 +325,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 static int
 sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
+  struct ptybuffer		*p=tino_sock_user(sock);
   struct ptybuffer_connect	*buf;
   int				fd;
 
@@ -330,8 +334,8 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
     {
     case TINO_SOCK_PROC_CLOSE:
       xDP(("sock_process() CLOSE"));
-      FATAL(sock!=p.sock);
-      p.sock	= 0;
+      FATAL(sock!=p->sock);
+      p->sock	= 0;
       return TINO_SOCK_CLOSE;
       
     case TINO_SOCK_PROC_EOF:
@@ -348,7 +352,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       if (fd<0)
 	return -1;
       buf	= tino_alloc0(sizeof *buf);
-      buf->p	= tino_sock_user(sock);
+      buf->p	= p;
       tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
       break;
     }
