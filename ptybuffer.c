@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.5  2004-05-21 02:23:35  tino
+ * Revision 1.6  2004-05-23 10:12:23  tino
+ * new upload for NWNadm
+ *
+ * Revision 1.5  2004/05/21 02:23:35  tino
  * minor issue fixed: free() of "work" pointer which is a stack variable
  *
  * Revision 1.4  2004/05/20 04:59:00  tino
@@ -33,7 +36,9 @@
  * Revision 1.1  2004/05/19 20:22:30  tino
  * first commit
  */
+#if 0
 #define ECHO_SEND
+#endif
 #define HISTORY_LENGTH	1000
 #if 0
 #define DEBUG_INTERACTIVE
@@ -296,8 +301,6 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  memcpy(ent->data+8+put, "]\n", (size_t)2);
 	  p->count++;
 	  p->forcepoll	= 1;
-#else
-#error
 #endif
 	  p->outpos	+= put;
 	}
@@ -419,8 +422,10 @@ main(int argc, char **argv)
    * before we fork off the PTY
    */
   sock	= tino_sock_unix_listen(argv[1]);
+#ifndef DEBUG_INTERACTIVE
   if ((fd=open("/dev/null", O_RDWR))<0)
     ex("/dev/null");
+#endif
 
   /* Now fork off the PTY thread
    */
@@ -432,8 +437,8 @@ main(int argc, char **argv)
        * Then exec the wanted program
        */
       close(sock);
-      close(fd);
 #ifndef DEBUG_INTERACTIVE
+      close(fd);
       close(fds[1]);
 #endif
       execvp(argv[2], argv+2);
@@ -443,6 +448,8 @@ main(int argc, char **argv)
     }
   if (pid==(pid_t)-1)
     ex("forkpty");
+
+  chdir("/");
 
 #ifndef DEBUG_INTERACTIVE
   /* Close the controlling terminal

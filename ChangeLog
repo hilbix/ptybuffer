@@ -1,3 +1,12 @@
+2004-05-23    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (main): cd /
+
+2004-05-22    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c: ECHO_SEND now is no more the default (it's stupid,
+	"stty echo" and "stty -echo" are much better).
+
 2004-05-21    <tino@firebird.03.softkill.net>
 
 	* stress.sh: Well, there is a strange bug.  The stress.sh script
