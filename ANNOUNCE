@@ -1,4 +1,4 @@
-This fixes a major bug in the socket implementation.
+Minor changes
 
-When more than 16 sockets are used, the implementation was very likely
-to fail.  I fixed the socket implementation.
+This only is an update to reflect the version of NWNadm (2.6.2) which
+now runs here for a longer time now.
