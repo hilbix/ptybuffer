@@ -1,5 +1,4 @@
-This version should work as expected.
+This version fixes a major memory corruption issue.
 
-The nwn/ subdirectory is there, and it will now (after release!)
-undergo some testing.  After this I think I will make the
-freshmeat announcement.
+Thanks to -lefence it was easy to track this down.  Previous
+versions may segfault unconditionally when sockets connect.
