@@ -1,18 +1,12 @@
 -*-text-*-
 $Header$
 
-- Add debugging/logging option, such that scripting problems can be
-  detected more easily than now.
-
 - Support for OOB command to/from client.  This way we perhaps can
   send some control commands to the master instead of the pty.
 
 - Gracefully abort client sockets on EOF of pty process.
 
-- Implement non-deamonized mode such that you can use ptybuffer from
-  /etc/inittab
-
-- Options instead of hardcoded values (ECHO, History-Size)
+- Make History size configurable.
 
 - Count lines, not blocks.
 
@@ -21,7 +15,14 @@ $Header$
 - Client which is capable of sending ^C etc. (without bad tricks) from
   the command line to the pty.
 
-$Log$
-Revision 1.1  2004-05-21 11:17:22  tino
-added
+- Terminate (HUP) in case the socket is removed or changed (does no more
+  refer to current ptybuffer), can be detected when INODE number changes.
 
+- Remove socket on close.  "Remove by rename."
+
+$Log$
+Revision 1.2  2004-10-22 01:07:48  tino
+modified TODOs after this version
+
+Revision 1.1  2004/05/21 11:17:22  tino
+added
