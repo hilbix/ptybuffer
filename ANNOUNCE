@@ -1,5 +1,13 @@
-Release with closedown bugfix, ECHO_SEND disabled and NWNadm 2.4
+Mainly updated NWNadm
 
-NWNadm is tightly bound to the ptybuffer source.
-It basically works without my "accept" tool,
-but you should grab it, too, for the autostart.sh
+NWNadm starts to become usable.  File upload/download is implemented,
+but due to missing dabase support there is no connection between the
+upload directory and the NWN server, except you do it yourself.
+
+There is limited Mozilla support, too.
+However it looks like Mozilla, like IE, needs a multi-connection-patch,
+which I did not find out yet how to do.  So with Mozilla you can only
+have one of the running windows open in parallel.
+
+This means, if you have more than one server, NWNadm does not work well
+with Mozilla for now.
