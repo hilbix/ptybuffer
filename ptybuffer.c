@@ -1,11 +1,31 @@
 /* $Header$
  *
- * $Log$
- * Revision 1.1  2004-05-19 20:22:30  tino
- * first commit
+ * ptybuffer: daemonize interactive tty line driven programs with output history
+ * Copyright (C)2004 Valentin Hilbig, webmaster@scylla-charybdis.com
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * $Log$
+ * Revision 1.2  2004-05-20 02:05:43  tino
+ * History now has a define and is 1000 lines, not 10 like for testing
+ *
+ * Revision 1.1  2004/05/19 20:22:30  tino
+ * first commit
  */
 #define ECHO_SEND
+#define HISTORY_LENGTH	1000
 #if 0
 #define DEBUG_INTERACTIVE
 #endif
@@ -203,7 +223,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
   int			got, put;
 
   xDP(("master_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
-  if (p->screen->count>10)
+  if (p->screen->count>HISTORY_LENGTH)
     tino_glist_free(tino_glist_get(p->screen));
   switch (type)
     {
