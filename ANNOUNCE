@@ -1,4 +1,15 @@
-Minor changes
+Logfiles, can run in foreground, options added and minor bugfix
 
-This only is an update to reflect the version of NWNadm (2.6.2) which
-now runs here for a longer time now.
+WARNING!  Version is nearly untested.
+
+ptybuffer was extended to accept options.  It now can run from
+/etc/inittab or deamontools and has support to write logfiles, too.
+Please see the help which comes when ptybuffer is called without any
+argument.
+
+A little bug was fixed which could cause data transferred to the
+terminal to wait in ptybuffer until new data arrives to the terminal.
+
+Additional note: The NWNadm part in this version was removed.  It will
+show up as an independent package in future.
+

@@ -1,3 +1,25 @@
+2004-10-01    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (main): A lot of more options added.
+	(file_out, file_log): Added logging at various places.
+
+2004-09-20    <tino@firebird.03.softkill.net>
+
+	* test.sh: set added, to see new environment variable
+	PTYBUFFER_PID
+
+	* ptybuffer.c: Option -d disabled daemonization, such that you can
+	easily run programs under ptybuffer from /etc/inittab or similar.
+	(master_process): Minor Bugfix (found at code review): When not
+	all data could be delivered to the terminal at once, some data
+	might have hung in ptybuffer until the next data block to the
+	terminal was ready.  This bug is likely to trigger only if you
+	transfer huge amounts of data to the terminal, which usually is
+	not done.
+	(main): put the current PID of ptybuffer into the environment as
+	PTYBUFFER_PID, such that child processes know how to send signals
+	there.
+
 2004-05-23    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (main): cd /

@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.8  2004-05-23 12:25:58  tino
+ * Revision 1.9  2004-10-22 01:14:12  tino
+ * new release
+ *
+ * Revision 1.8  2004/05/23 12:25:58  tino
  * Thou shalt not forget to test compile before checkin ;)
  *
  * Revision 1.7  2004/05/23 12:22:21  tino
@@ -42,19 +45,18 @@
  * Revision 1.1  2004/05/19 20:22:30  tino
  * first commit
  */
-#if 0
-#define ECHO_SEND
-#endif
 #define HISTORY_LENGTH	1000
-#if 0
-#define DEBUG_INTERACTIVE
-#endif
 
-#include "tino_common.h"
+#include "tino/dirty.h"
+#include "tino/debug.h"
+#include "tino/fatal.h"
+#include "tino/alloc.h"
 #include "tino/sock.h"
 #include "tino/slist.h"
+#include "tino/getopt.h"
 
 #include <unistd.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -64,8 +66,73 @@
 #include <pty.h>
 #include <utmp.h>
 
+#include "ptybuffer_version.h"
+
+static char	*outfile, *logfile;
+static int	doecho;
+
+/* Do you have a better idea?
+ *
+ * The file must be always flushed and I want you to be able to always
+ * rotate the file without anything to keep in mind.
+ */
+static __inline__ void
+file_out(void *ptr, size_t len)
+{
+  FILE	*fd;
+
+  fd	= stdout;
+  if (!outfile ||
+      (strcmp(outfile, "-") && (fd=fopen(outfile, "a+"))==0))
+    return;
+
+  fwrite(ptr, len, 1, fd);
+  if (fd==stdout)
+    fflush(fd);
+  else
+    fclose(fd);
+}
+
+/* do not call this before the last fork
+ */
+static void
+file_log(const char *s, ...)
+{
+  FILE		*fd;
+  va_list	list;
+  struct tm	tm;
+  time_t	tim;
+  static pid_t	pid;
+
+  fd	= stderr;
+  if (!logfile ||
+      (strcmp(logfile, "-") && (fd=fopen(logfile, "a+"))==0))
+    return;
+
+  time(&tim);
+  gmtime_r(&tim, &tm);
+  if (!pid)
+    pid	= getpid();
+  fprintf(fd,
+	  "%4d-%02d-%02d %02d:%02d:%02d %ld: ",
+	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
+	  tm.tm_hour, tm.tm_min, tm.tm_sec,
+	  (long)pid);
+  va_start(list, s);
+  vfprintf(fd, s, list);
+  va_end(list);
+  fputc('\n', fd);
+  if (fd==stderr)
+    fflush(fd);
+  else
+    fclose(fd);
+  return;
+}
+
 /* main parent:
  * inform caller if everything is OK
+ *
+ * This is the main program if daemonization is done!
  */
 static int
 parent(pid_t pid, int *fds)
@@ -80,6 +147,8 @@ parent(pid_t pid, int *fds)
    */
   close(fds[1]);
 
+  file_log("parent: waiting for OK");
+
   /* wait until the child is ready
    */
   while ((got=read(fds[0], buf, sizeof buf-1))==-1)
@@ -93,7 +162,10 @@ parent(pid_t pid, int *fds)
   /* child sends OK in case everything is ok
    */
   if (got==2 && !strncmp(buf, "OK", 2))
-    return 0;
+    {
+      file_log("parent: got OK");
+      return 0;
+    }
 
   buf[got]	= 0;
   if (!got)
@@ -102,6 +174,7 @@ parent(pid_t pid, int *fds)
   /* We have some error.
    * Be sure to kill off the child.
    */
+  file_log("parent: killing %ld, got error '%s'", (long)pid, buf);
   kill(pid, 9);
   ex("error: %s", buf);
   return -1;
@@ -128,6 +201,13 @@ struct ptybuffer_connect
     long long		screenpos;
   };
 
+/* Handle data to a connected socket:
+ * Send incoming to terminal,
+ * Output buffer to socket.
+ *
+ * If some data cannot be sent to the remote in time,
+ * tell how much lines were dropped.
+ */
 static int
 connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
@@ -141,14 +221,28 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
     case TINO_SOCK_PROC_EOF:
       xDP(("connect_process() eof"));
     case TINO_SOCK_PROC_CLOSE:
+      /* Good bye to the other side
+       */
+      file_log("(%d) close: %d sockets",
+	       tino_sock_fd(sock), tino_sock_imp.use);
       return TINO_SOCK_FREE;
 
     case TINO_SOCK_PROC_POLL:
       xDP(("connect_process() poll"));
-      return c->outpos<c->outfill || c->screenpos<c->p->count ? 3 : 1;
+      /* If something is waiting to be written
+       * mark this side as readwrite, else only read.
+       */
+      return (c->outpos<c->outfill || c->screenpos<c->p->count
+	      ? TINO_SOCK_READWRITE
+	      : TINO_SOCK_READ);
 
     case TINO_SOCK_PROC_READ:
       xDP(("connect_process() read"));
+      /* Read data lines comming in.
+       * Only send full lines to the termina.
+       *
+       * For safety, the line length is limited.
+       */
       if (c->infill>=sizeof c->in)
 	{
 	  c->discard	= 1;	/* line too long	*/
@@ -158,8 +252,11 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 		       c->in+c->infill, sizeof c->in-c->infill);
       xDP(("connect_process() read %d", got));
       if (got<=0)
-	return got;
+	return got;	/* proper error handling done by upstream	*/
       c->infill	+= got;
+      /* Send the lines to the terminal
+       * One by one.
+       */
       while (c->infill && (pos=memchr(c->in, '\n', (size_t)c->infill))!=0)
 	{
 	  pos++;
@@ -175,6 +272,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	      xDP(("connect_process() add %.*s", (int)cnt, c->in));
 	      tino_glist_add_n(c->p->send, c->in, cnt);
 	      tino_sock_poll(c->p->pty);
+#if 0
+	      /* This is too dangerous.  If passwords are entered with
+	       * 'stty noecho', then they shall not be recorded.
+	       * (Well, we can perhaps auto-switch logging later.)
+	       */
+	      file_log("(%d) input: %.*s",
+		       tino_sock_fd(sock), (int)cnt-1, c->in);
+#endif
 	    }
 	  c->discard	= 0;
 	  if ((c->infill-=cnt)>0)
@@ -184,6 +289,10 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 
     case TINO_SOCK_PROC_WRITE:
       xDP(("connect_process() write"));
+      /* Socket is ready to be written to
+       *
+       * We have it all.
+       */
       if (c->outpos>=c->outfill)
 	{
 	  TINO_GLIST_ENT	list;
@@ -199,6 +308,12 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 					  min-c->screenpos);
 	      c->screenpos	= min;
 	    }
+	  /* Find the proper infoblock
+	   *
+	   * Well, I should optimize this,
+	   * but ptybuffer was not written to handle enourmous
+	   * amounts of data and enourmous number of connects.
+	   */
 	  list	= c->p->screen->list;
 	  for (; min<c->screenpos && list; min++)
 	    list	= list->next;
@@ -213,6 +328,8 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	      c->outfill	+= list->len;
 	    }
 	}
+      /* This should not happen, but ..
+       */
       if (!c->outfill)
 	{
 	  xDP(("connect_process() write cancel"));
@@ -226,14 +343,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	c->outpos	+= put;
       return put;
 
-    case TINO_SOCK_PROC_ACCEPT:
-      FATAL("TINO_SOCK_PROC_ACCEPT");
+    default:
+      break;
     }
   FATAL("connect_process");
   return 0;
 }
 
-/* Process PTY information
+/* Process information comming from PTY
  */
 static int
 master_process(TINO_SOCK sock, enum tino_sock_proctype type)
@@ -243,25 +360,46 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
   int			got, put;
 
   xDP(("master_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
+  /* Do a cleanup step each time we come here.
+   */
   if (p->screen->count>HISTORY_LENGTH)
     tino_glist_free(tino_glist_get(p->screen));
   switch (type)
     {
     case TINO_SOCK_PROC_CLOSE:
       xDP(("master_process() CLOSE"));
+      /* The terminal was closed.
+       *
+       * Flag the close, as we have to wait for
+       * all others to have read the data.
+       *
+       * Actually, for now, ptybuffer does not wait at all, sorry.
+       */
       FATAL(sock!=p->pty);
       p->pty	= 0;
+      file_log("close master");
       return TINO_SOCK_CLOSE;
 
     case TINO_SOCK_PROC_EOF:
       xDP(("master_process() EOF"));
+      /* This does a close in the next cycle
+       */
       return TINO_SOCK_ERR;
 
     case TINO_SOCK_PROC_POLL:
       xDP(("master_process() poll %d", p->send->count));
-      return p->send->count ? TINO_SOCK_READWRITE : TINO_SOCK_READ;
+      /* If something is waiting to be written
+       * mark this side as readwrite, else only read.
+       */
+      return (p->send->count || (p->out && p->outpos<p->outlen)
+	      ? TINO_SOCK_READWRITE
+	      : TINO_SOCK_READ);
 
     case TINO_SOCK_PROC_READ:
+      /* Save output from the terminal in our internal buffer
+       *
+       * Cleanup of lines is done above.
+       */
       xDP(("master_process() read"));
       got	= read(tino_sock_fd(sock), buf, sizeof buf);
       xDP(("master_process() read %d", got));
@@ -269,6 +407,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	return -1;
       if (got>0)
 	{
+	  file_out(buf, (size_t)got);
 	  tino_glist_add_n(p->screen, buf, (size_t)got);
 	  p->count++;
 	  p->forcepoll	= 1;
@@ -277,11 +416,18 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 
     case TINO_SOCK_PROC_WRITE:
       xDP(("master_process() write"));
+      /* Write data to the terminal which is due.
+       *
+       * First: Free old used up output pointers
+       */
       if (p->out && p->outpos>=p->outlen)
 	{
 	  free((void *)p->out);
 	  p->out	= 0;
 	}
+      /* fetch some more data which is waiting
+       * to be written to the terminal
+       */
       if (!p->out)
 	{
 	  TINO_GLIST_ENT	ent;
@@ -294,33 +440,43 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  ent->data	= 0;
 	  tino_glist_free(ent);
 	}
+      /* Write something to the terminal
+       */
       put	= write(tino_sock_fd(sock),
 			p->out+p->outpos, p->outlen-p->outpos);
       xDP(("master_process() write %d", put));
       if (put>0)
 	{
-#ifdef ECHO_SEND
-	  TINO_GLIST_ENT	ent;
+	  if (doecho)
+	    {
+	      TINO_GLIST_ENT	ent;
 
-	  ent	= tino_glist_add_n(p->screen, NULL, 10+put);
-	  strcpy(ent->data, "\n[sent: ");
-	  memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
-	  memcpy(ent->data+8+put, "]\n", (size_t)2);
-	  p->count++;
-	  p->forcepoll	= 1;
-#endif
+	      ent	= tino_glist_add_n(p->screen, NULL, 10+put);
+	      strcpy(ent->data, "\n[sent: ");
+	      memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
+	      memcpy(ent->data+8+put, "]\n", (size_t)2);
+	      file_out(ent->data, 10+put);
+	      p->count++;
+	      p->forcepoll	= 1;
+	    }
+	  /* Remember which data was written.
+	   * Note that cleanup is done above.
+	   */
 	  p->outpos	+= put;
 	}
       return put;
 
-    case TINO_SOCK_PROC_ACCEPT:
-      FATAL("TINO_SOCK_PROC_ACCEPT");
+    default:
+      break;
     }
   FATAL("master_process");
   return 0;
 }
 
 /* Accept new connections from socket
+ * This is:
+ * A new client comes in and wants to see the data we have
+ * buffered from the tty.
  */
 static int
 sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
@@ -332,7 +488,11 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
   xDP(("sock_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
   switch (type)
     {
+    default:
+      FATAL("sock_process");
+
     case TINO_SOCK_PROC_CLOSE:
+      file_log("close socket");
       xDP(("sock_process() CLOSE"));
       FATAL(sock!=p->sock);
       p->sock	= 0;
@@ -354,6 +514,8 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       buf	= tino_alloc0(sizeof *buf);
       buf->p	= p;
       tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
+
+      file_log("(%d) connect: %d sockets", fd, tino_sock_imp.use);
       break;
     }
   xDP(("sock_process() end"));
@@ -361,19 +523,35 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
 }
 
 /* Run the main loop
- * in deamon mode
+ * in daemon mode
+ *
+ * Actually with option -d this is the main program.
  */
 static int
-deamonloop(int sock, int master)
+daemonloop(int sock, int master)
 {
   struct ptybuffer	work = { 0 };
 
-  xDP(("deamonloop(%d,%d)", sock, master));
+  file_log("starting loop");
+
+  xDP(("daemonloop(%d,%d)", sock, master));
   work.sock		= tino_sock_new_fd(sock,   sock_process,   &work);
   work.pty		= tino_sock_new_fd(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
   work.forcepoll	= 1;
+  /* Actually I should extend this:
+   *
+   * As long as there is a socket, loop.
+   *
+   * If terminal is closed, then close work.sock, too.
+   *
+   * Any socket which tries to write to the closed terminal is closed,
+   * too.
+   *
+   * If terminal is closed and all data was written, close the write
+   * side and linger until socket is closed.
+   */
   while (work.pty && work.sock)
     {
       int	tmp;
@@ -386,14 +564,16 @@ deamonloop(int sock, int master)
   return 0;
 }
 
+/* This routine is too long
+ */
 int
 main(int argc, char **argv)
 {
   pid_t	pid;
-  int	master, sock, fd;
-#ifndef DEBUG_INTERACTIVE
+  int	master, sock, fd, stderr_saved;
+  int	foreground;
   int	fds[2];
-#endif
+  int	argn;
 
   signal(SIGPIPE, SIG_IGN);
 
@@ -404,79 +584,189 @@ main(int argc, char **argv)
   ioctl(0, TIOCGWINSZ, (char *)&winsz);
 #endif
 
-  if (argc<3)
-    {
-      fprintf(stderr, "Usage: %s sockfile command args...\n", argv[0]);
-      return 1;
-    }
-
-#ifndef DEBUG_INTERACTIVE
-  /* Open a communication pipe
-   * such that errors are propagated to the caller
-   */
-  if (pipe(fds))
-    ex("pipe");
-
-  /* fork off a child
-   */
-  if ((pid=fork())!=0)
-    return parent(pid, fds);
-
-  /* child:
-   * Close the reading pipe
-   * Start a new process session
-   */
-  close(fds[0]);
-  setsid();
+  argn	= tino_getopt(argc, argv, 2, 0,
+		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
+#if 0
+		      TINO_GETOPT_DEBUG
 #endif
+		      " sockfile command [args...]",
+
+#if 0
+		      TINO_GETOPT_STRING
+		      "b brand	Branding running process name.\n"
+		      "		You can do 'killall brand' afterwards"
+		      , &brand, 
+#endif
+#if 0
+		      TINO_GETOPT_FLAG
+		      "c	Do nothing (check) if the socket appears to be living.\n"
+		      "		Use with option -f to re-create the socket."
+		      , &check,
+#endif
+
+		      TINO_GETOPT_FLAG
+		      "d	ptybuffer runs in foreground\n"
+		      "		Else daemonizes: It detaches from the\n"
+		      "		current terminal and changes working dir to /"
+		      , &foreground,
+
+		      TINO_GETOPT_FLAG
+		      "e	Echo input to terminal output.\n"
+		      "		Try this if 'stty echo' fails.\n"
+		      , &doecho,
+
+#if 0
+		      TINO_GETOPT_FLAG
+		      "f	force socket creation.  (Also see -c)"
+		      , &force,
+#endif
+
+#if 0
+		      TINO_GETOPT_FLAG
+		      "i	immediate mode, do not wait for full lines.\n"
+		      "		Without this option ptybuffer waits, until a full line is\n"
+		      "		received from clients until this line is sent to the terminal"
+		      , &immediate,
+#endif
+
+		      TINO_GETOPT_STRING
+		      "l file	write activity log to file (- to stderr)\n"
+		      "		In doubt use an absolute path!"
+		      , &logfile,
+
+#if 0
+		      TINO_GETOPT_INT
+		      TINO_GETOPT_INT_MIN
+		      TINO_GETOPT_INT_MIN_REF
+		      "n count	number of history buckets to allocate\n"
+		      "		Default is 1000 reads (not lines)."
+		      , 0
+		      , &tailsize
+		      , &histsize,
+#endif
+
+#if 0
+		      TINO_GETOPT_INT
+		      TINO_GETOPT_INT_MIN
+		      TINO_GETOPT_INT_MAX_REF
+		      "t count	number of tail buckets to print on connect\n"
+		      "		-1=all, else must be less than -n option."
+		      , -1
+		      , &histsize
+		      , &tailsize,
+#endif
+
+		      TINO_GETOPT_STRING
+		      "o file	write terminal output to file (- to stdout)\n"
+		      "		In doubt use an absolute path!"
+		      , &outfile,
+
+		      NULL
+		      );
+  xDP(("[argn=%d]", argn));
+  if (argn<=0)
+    return 1;
+
+  if (!foreground)
+    {
+      xDP(("[daemonizing]"));
+      /* Open a communication pipe
+       * such that errors are propagated to the caller
+       */
+      if (pipe(fds))
+	ex("pipe");
+
+      /* fork off a child
+       */
+      if ((pid=fork())!=0)
+	return parent(pid, fds);
+
+      /* child:
+       * Close the reading pipe
+       * Start a new process session
+       */
+      close(fds[0]);
+      setsid();
+    }
 
   /* Open some file descriptors
    * Do it here such that errors can be intercepted
    * before we fork off the PTY
    */
-  sock	= tino_sock_unix_listen(argv[1]);
-#ifndef DEBUG_INTERACTIVE
-  if ((fd=open("/dev/null", O_RDWR))<0)
-    ex("/dev/null");
-#endif
+  sock	= tino_sock_unix_listen(argv[argn++]);
+  fd	= -1;	/* only to skip a warning */
+  if (!foreground)
+    if ((fd=open("/dev/null", O_RDWR))<0)
+      ex("/dev/null");
 
   /* Now fork off the PTY thread
+   *
+   * This closes stderr, however perhaps we need it later again.
    */
+  stderr_saved	= dup(2);
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
     {
-      xDP(("[child]"));
+      char	*env;
+
       /* Close the writing pipe
        * and all other not needed file descriptors.
        * Then exec the wanted program
        */
       close(sock);
-#ifndef DEBUG_INTERACTIVE
-      close(fd);
-      close(fds[1]);
-#endif
-      execvp(argv[2], argv+2);
+      if (!foreground)
+	{
+	  close(fd);
+	  close(fds[1]);
+	}
+      if (logfile && !strcmp(logfile, "-"))
+	dup2(stderr_saved, 2);
+      close(stderr_saved);
+
+      /* Put the current PID into the environment.
+       *
+       * I don't even trust my eyes, but 120 shall be long enough ever.
+       */
+      env	= tino_alloc(120);
+      snprintf(env, 120, "PTYBUFFER_PID=%ld", (long)getppid());
+      env[119]	= 0;
+      putenv(env);
+
+      file_log("child: starting %s", argv[argn]);
+      execvp(argv[argn], argv+argn);
+
       /* Tell about the error
        */
-      ex("execvp %s", argv[2]);
+      file_log("child: exec failed");
+      ex("execvp %s", argv[argn]);
     }
   if (pid==(pid_t)-1)
     ex("forkpty");
+  close(stderr_saved);
 
-  chdir("/");
+  if (!foreground)
+    {
+      file_log("daemonizing");
 
-#ifndef DEBUG_INTERACTIVE
-  /* Close the controlling terminal
-   */
-  dup2(fd, 0);
-  dup2(fd, 1);
-  dup2(fd, 2);
-  close(fd);
+      /* Close the controlling terminal.
+       * Only close fd if it's not needed.
+       * Well, better don't try stdout/stderr logging
+       * within daemon mode, it's stupid.
+       */
+      dup2(fd, 0);
+      if (outfile || strcmp(outfile, "-"))
+	dup2(fd, 1);
+      if (logfile || strcmp(logfile, "-"))
+	dup2(fd, 2);
+      close(fd);
 
-  /* Tell OK to the caller
-   */
-  write(fds[1], "OK", 2);
-  close(fds[1]);
-#endif
+      setsid();
+      chdir("/");
 
-  return deamonloop(sock, master);
+      /* Tell OK to the caller
+       */
+      write(fds[1], "OK", 2);
+      close(fds[1]);
+    }
+
+  return daemonloop(sock, master);
 }
