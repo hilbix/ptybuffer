@@ -75,6 +75,15 @@ Bugs:
 
 - It has not been tested much.
 
+- If you send data to ptybuffer and close the socket very fast, the
+  EOF on the write side closes the socket before everything can be
+  read from the read side by the select-loop.  Luckily, usually not
+  much is sent to the controlled process this way (one line or so), so
+  a short sleep should be enough for ptybuffer to gather the data.  To
+  fix this BUG I must implement the socket flags first and restructure
+  the the EOF processing a bit - no time for it now, it currently
+  works good enough for me.
+
 
 Example:
 ========
@@ -135,6 +144,9 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.1  2004-05-20 02:06:52  tino
+Revision 1.2  2004-05-20 09:53:11  tino
+release texts
+
+Revision 1.1  2004/05/20 02:06:52  tino
 added
 
