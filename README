@@ -1,0 +1,140 @@
+-*-text-*-
+$Header$
+
+Tired reading docs?
+
+make
+./ptybuffer
+head test.sh
+
+
+Changes
+=======
+
+2004-05-19 0.1.0	initial version
+
+
+ptybuffer
+=========
+
+WARNING!  THIS IS RELEASE EARLY CODE!
+
+ptybuffer does following:
+
+- Deamonizes the process (arg2 and above) with a pty such that stdlib
+  usually makes output line buffered.
+
+- Gathers the output history of the pty for later view.  Currently
+  this is 1000 reads (not neccessarily lines).
+
+- Waits for connects to the unix socket (command line argument 1)
+
+- Outputs the pty history to the connected unix socket and
+  continuously sends all new output to the connected unix socket.
+
+- Read (full) lines from the connected unix sockets and send them to
+  the pty (line can be max. 4095 bytes long).
+
+- Allows multiple concurrent connects to the unix socket.  This way
+  several persons in parallel can control one process.
+
+This has several improvements over screen:
+
+- Screen blocks all connects if one session freezes.  ptybuffer is
+  thought to always let the program run, regardless what mess the
+  socket connections might do.  In case of a connect stall it just
+  discards data to the frozen connect and if the connect catches up
+  it tells it the fact.
+
+- Concurrent access is no problem.  Lines are always send as full lines.
+
+- History of output is clearly defined, not just something like a
+  window.
+
+- Naturally scrolling logfile support.  Eases development in case you
+  have excessive debugging active and want to see the output as soon
+  as it comes from the program, even without shell access.
+
+- You can control where the socket is.  This improves oversight in
+  case you have running several commands in parallel.
+
+- Easy to use from web scripting languages like PHP which can directly
+  connect to a Unix Domain Socket.  Really no need to use error prone
+  constructs like expect.
+
+
+Bugs:
+=====
+
+- ptybuffer does not unlink() the socket.  So you have to delete it
+  first, else ptybuffer will bail out.
+
+- The program running under pty control is not considered to stop.  If
+  this ever happens, ptybuffer just exits without making sure that all
+  data is sent to connected sockets.
+
+- It has not been tested much.
+
+
+Example:
+========
+
+See introductory comment in test.sh
+
+For a PHP usage example see the nwn/ subdirectory (footnote [0])
+
+You need a program capable to send data to unix sockets to test
+ptybuffer.  The only two programs I know to be capable of this easily
+is netpipes and my utility accept (version 2), see
+http://www.scylla-charybdis.com/ in the tools section.
+
+
+Install:
+========
+
+Just type
+	make
+
+Was tested to compile under RedHat 9 and SuSE 9.
+
+There is no install or similar.  Just run it from the source directory
+or copy it where you want to have it.
+
+
+DISCLAIMER:
+===========
+
+USE AT YOUR OWN RISK!  I CANNOT ACCEPT ANY LIABLILITY FOR ANYTHING!
+THIS *IS* RELEASE EARLY CODE!  IT IS CONSIDERED TO BE INSTABLE!
+
+DON'T TRUST SOURCES!  READ THEM!  READ THEM AGAIN!  AND BE SURE THERE
+ARE NO KNOWN BACKDOORS IN THEM!  IT'S OPEN SOURCE, SO YOU CAN CHECK!
+
+I tried my best.  However I am human.  So I make mistakes.  Be prepared.
+All I guarantee is, that I never do anything to harm *you* by purpose.
+
+Copyright (C)2004 by Valentin Hilbig
+
+ptybuffer may be distributed freely under the conditions of the
+GPL2 (GNU General Public License version 2) or higher.
+
+
+Footnotes:
+==========
+
+[0] ptybuffer was programmed to control the servers for a new
+persistent NWN[1] world which heavily uses NWNX/APS and a database
+driven BIC file editor (BIC -> SQL -> DB -> XML -> BIC) which is
+likely to be released publicly in future under the GPL, too.
+
+[1] Neverwinter Nights etc. are the trademark of Bioware INC, see
+http://nwn.bioware.com/
+
+
+-Tino
+webmaster@scylla-charybdis.com
+http://www.scylla-charybdis.com/
+$Log$
+Revision 1.1  2004-05-20 02:06:52  tino
+added
+
