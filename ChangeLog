@@ -1,3 +1,8 @@
+2004-11-12    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (main): SIGSEV corrected
+	(main): more logging added and output clarified
+
 2004-10-01    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (main): A lot of more options added.

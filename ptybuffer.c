@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.9  2004-10-22 01:14:12  tino
+ * Revision 1.10  2004-11-12 04:45:00  tino
+ * NULL pointer dereference corrected and minor logging improvements
+ *
+ * Revision 1.9  2004/10/22 01:14:12  tino
  * new release
  *
  * Revision 1.8  2004/05/23 12:25:58  tino
@@ -147,13 +150,14 @@ parent(pid_t pid, int *fds)
    */
   close(fds[1]);
 
-  file_log("parent: waiting for OK");
+  file_log("parent: waiting for OK from main %ld", (long)pid);
 
   /* wait until the child is ready
    */
   while ((got=read(fds[0], buf, sizeof buf-1))==-1)
     if (errno!=EINTR && errno!=EAGAIN)
       {
+	perror("read");
 	got	= 0;
 	break;
       }
@@ -174,7 +178,7 @@ parent(pid_t pid, int *fds)
   /* We have some error.
    * Be sure to kill off the child.
    */
-  file_log("parent: killing %ld, got error '%s'", (long)pid, buf);
+  file_log("parent: killing main %ld, got error '%s'", (long)pid, buf);
   kill(pid, 9);
   ex("error: %s", buf);
   return -1;
@@ -220,10 +224,13 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
     {
     case TINO_SOCK_PROC_EOF:
       xDP(("connect_process() eof"));
+      return TINO_SOCK_FREE;
+
     case TINO_SOCK_PROC_CLOSE:
       /* Good bye to the other side
        */
-      file_log("(%d) close: %d sockets",
+      xDP(("connect_process() close"));
+      file_log("close %d: %d sockets",
 	       tino_sock_fd(sock), tino_sock_imp.use);
       return TINO_SOCK_FREE;
 
@@ -277,7 +284,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	       * 'stty noecho', then they shall not be recorded.
 	       * (Well, we can perhaps auto-switch logging later.)
 	       */
-	      file_log("(%d) input: %.*s",
+	      file_log("input %d: %.*s",
 		       tino_sock_fd(sock), (int)cnt-1, c->in);
 #endif
 	    }
@@ -515,7 +522,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       buf->p	= p;
       tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
 
-      file_log("(%d) connect: %d sockets", fd, tino_sock_imp.use);
+      file_log("connect %d: %d sockets", fd, tino_sock_imp.use);
       break;
     }
   xDP(("sock_process() end"));
@@ -532,7 +539,7 @@ daemonloop(int sock, int master)
 {
   struct ptybuffer	work = { 0 };
 
-  file_log("starting loop");
+  file_log("main: starting loop");
 
   xDP(("daemonloop(%d,%d)", sock, master));
   work.sock		= tino_sock_new_fd(sock,   sock_process,   &work);
@@ -631,7 +638,7 @@ main(int argc, char **argv)
 
 		      TINO_GETOPT_STRING
 		      "l file	write activity log to file (- to stderr)\n"
-		      "		In doubt use an absolute path!"
+		      "		When daemonizing use an absolute path!"
 		      , &logfile,
 
 #if 0
@@ -658,7 +665,7 @@ main(int argc, char **argv)
 
 		      TINO_GETOPT_STRING
 		      "o file	write terminal output to file (- to stdout)\n"
-		      "		In doubt use an absolute path!"
+		      "		When daemonizing use an absolute path!"
 		      , &outfile,
 
 		      NULL
@@ -742,10 +749,11 @@ main(int argc, char **argv)
   if (pid==(pid_t)-1)
     ex("forkpty");
   close(stderr_saved);
+  file_log("main: forked child %ld", (long)pid);
 
   if (!foreground)
     {
-      file_log("daemonizing");
+      file_log("main: daemonizing, cd /");
 
       /* Close the controlling terminal.
        * Only close fd if it's not needed.
@@ -753,9 +761,9 @@ main(int argc, char **argv)
        * within daemon mode, it's stupid.
        */
       dup2(fd, 0);
-      if (outfile || strcmp(outfile, "-"))
+      if (!outfile || strcmp(outfile, "-"))
 	dup2(fd, 1);
-      if (logfile || strcmp(logfile, "-"))
+      if (!logfile || strcmp(logfile, "-"))
 	dup2(fd, 2);
       close(fd);
 
@@ -767,6 +775,7 @@ main(int argc, char **argv)
       write(fds[1], "OK", 2);
       close(fds[1]);
     }
-
+  if (outfile)
+    file_log("main: output log: %s", outfile);
   return daemonloop(sock, master);
 }

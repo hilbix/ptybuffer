@@ -1,0 +1,27 @@
+daemonize interactive tty line driven programs with output history
+# $Header$
+#
+# $Log$
+# Revision 1.1  2004-11-12 04:45:00  tino
+# NULL pointer dereference corrected and minor logging improvements
+#
+
+ptybuffer was designed to get rid of screen/expect constructs to improve
+stability.  It deamonizes programs which need a tty/pty to operate.  Unix
+domain sockets then can connect, send lines to the program and receive the
+output (with history) of the program in real time.
+
+It's (again) in the alpha phase.
+NWNadm has been removed and will show up as an idependent package.
+
+<TABLE BORDER=1 CELLSPACING=0><TR><TD>
+Example how to fork off a web based emergency shell with ptybuffer
+<b>(this is a extreme security risk if you don't protect it!)</b>:
+<pre>
+copy the nwn part (see 0.2.x) into ~/public_html/shell/
+ptybuffer ~/public_html/shell/server/shell /bin/bash
+point your browser to
+http://your.server.name/~yourlogin/shell/all.php?port=shell
+</pre>
+If you don't understand this, don't even try it.  It's too dangerous!
+</TD></TR></TABLE>
