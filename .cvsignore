@@ -1,2 +1,5 @@
+Makefile
+Makefile.md5
+*.d
 ptybuffer
 ptybuffer_version.h

@@ -1,0 +1,32 @@
+# $Header$
+#
+# Read instructions in Makefile.proto how to use this.
+#
+# Prototype for your source directory Makefile.tino
+# Not copyrighted as this is just a stub.
+#
+# $Log$
+# Revision 1.1  2004-10-22 01:09:53  tino
+# Makefile via tinolib
+#
+
+      PROGS=ptybuffer
+       OBJS=
+       LIBS=
+ ADD_CFLAGS=
+ADD_LDFLAGS=
+ ADD_LDLIBS=-lutil
+      CLEAN=
+  DISTCLEAN=
+   TINOCOPY=
+#    TINOINC=tino_common.h
+#    TINOLIB=tino/lib.h
+# DBG_CFLAGS=
+#DBG_LDFLAGS=
+# DBG_LDLIBS=-lefence
+# STD_CFLAGS=
+#STD_LDFLAGS=
+# STD_LDLIBS=
+
+Makefile::
+	$(MAKE) -C tino tino HERE="$(PWD)"
