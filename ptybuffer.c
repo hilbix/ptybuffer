@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.11  2006-04-11 22:08:12  tino
+ * Revision 1.12  2006-04-11 22:44:15  tino
+ * Well, I was too fast already again.  It does not work.  Looking for error.
+ *
+ * Revision 1.11  2006/04/11 22:08:12  tino
  * new release
  *
  * Revision 1.10  2004/11/12 04:45:00  tino
@@ -51,7 +54,7 @@
  * Revision 1.1  2004/05/19 20:22:30  tino
  * first commit
  */
-#define HISTORY_LENGTH	"1000"	/* that's magic 	*/
+#define HISTORY_LENGTH	1000
 
 #include "tino/dirty.h"
 #include "tino/debug.h"
@@ -629,7 +632,7 @@ main(int argc, char **argv)
 
   argn	= tino_getopt(argc, argv, 2, 0,
 		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
-#if 1
+#if 0
 		      TINO_GETOPT_DEBUG
 #endif
 		      " sockfile command [args...]\n"
@@ -683,16 +686,15 @@ main(int argc, char **argv)
 		      TINO_GETOPT_INT_MIN
 		      TINO_GETOPT_INT_MIN_REF
 #endif
-		      "n count	number of history buckets to allocate\n"
-		      "		Default is " HISTORY_LENGTH " reads (not lines)."
+		      "n nr	number of history buckets to allocate\n"
+		      "		This is read()s and not lines."
 #if 0
-		      , 0
+		      , 0l
 		      , &tailsize
 #endif
 		      , &params.history_length,
-#if 0
-		      atol(HISTORY_LENGTH),
-#endif
+		      HISTORY_LENGTH,
+
 		      TINO_GETOPT_FLAG
 		      "s	use stdin as first connected socket.\n"
 		      "		This is similar to sockfile=- but ptybuffer continues on EOF"
