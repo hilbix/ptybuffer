@@ -11,6 +11,8 @@ head test/test.sh
 Changes
 =======
 
+2006-04-12 0.4.0	worksock from stdin, fresh tinolib, histsize
+2004-11-12 0.3.1	buffix options -l and -o
 2004-10-23 0.3.0	Options, minor bugfix, restructuring contents
 2004-07-05 0.2.4	NWNadm 2.6.2
 2004-06-13 0.2.3	fix in socket implementation
@@ -152,7 +154,10 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.3  2004-10-22 01:12:23  tino
+Revision 1.4  2006-04-11 22:08:12  tino
+new release
+
+Revision 1.3  2004/10/22 01:12:23  tino
 now reflects the new options
 
 Revision 1.2  2004/05/20 09:53:11  tino

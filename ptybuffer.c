@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.10  2004-11-12 04:45:00  tino
+ * Revision 1.11  2006-04-11 22:08:12  tino
+ * new release
+ *
+ * Revision 1.10  2004/11/12 04:45:00  tino
  * NULL pointer dereference corrected and minor logging improvements
  *
  * Revision 1.9  2004/10/22 01:14:12  tino
@@ -48,7 +51,7 @@
  * Revision 1.1  2004/05/19 20:22:30  tino
  * first commit
  */
-#define HISTORY_LENGTH	1000
+#define HISTORY_LENGTH	"1000"	/* that's magic 	*/
 
 #include "tino/dirty.h"
 #include "tino/debug.h"
@@ -184,6 +187,11 @@ parent(pid_t pid, int *fds)
   return -1;
 }
 
+struct ptybuffer_params
+  {
+    int			first_connect;	/* first connect (dupped stdin)	*/
+    long		history_length;
+  };
 struct ptybuffer
   {
     TINO_SOCK		sock, pty;
@@ -193,6 +201,7 @@ struct ptybuffer
     long long		count;
     int			outlen, outpos;
     const char		*out;
+    long		history_length;
   };
 
 struct ptybuffer_connect
@@ -231,7 +240,12 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       xDP(("connect_process() close"));
       file_log("close %d: %d sockets",
-	       tino_sock_fd(sock), tino_sock_imp.use);
+	       tino_sock_fd(sock), tino_sock_use());
+      /* propagate close of stdin main socket
+       * in case we use sockfile=-
+       */
+      if (c->p->sock==sock)
+	c->p->sock	= 0;
       return TINO_SOCK_FREE;
 
     case TINO_SOCK_PROC_POLL:
@@ -310,9 +324,9 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  min		= c->p->count-c->p->screen->count;
 	  if (min>c->screenpos)
 	    {
-	      c->outfill	= sprintf(c->out,
-					  "\n[[%Ld infoblocks skipped]]\n",
-					  min-c->screenpos);
+	      c->outfill	= snprintf(c->out, sizeof c->out,
+					   "\n[[%Ld infoblocks skipped]]\n",
+					   min-c->screenpos);
 	      c->screenpos	= min;
 	    }
 	  /* Find the proper infoblock
@@ -369,7 +383,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
   xDP(("master_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
   /* Do a cleanup step each time we come here.
    */
-  if (p->screen->count>HISTORY_LENGTH)
+  if (p->screen->count>p->history_length)
     tino_glist_free(tino_glist_get(p->screen));
   switch (type)
     {
@@ -480,6 +494,20 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
   return 0;
 }
 
+static TINO_SOCK
+ptybuffer_new_fd(struct ptybuffer *p, int fd)
+{
+  struct ptybuffer_connect	*buf;
+  TINO_SOCK			sock;
+
+  buf		= tino_alloc0(sizeof *buf);
+  buf->p	= p;
+  sock		= tino_sock_new_fd(fd, connect_process, buf);
+
+  file_log("connect %d: %d sockets", fd, tino_sock_use());
+  return sock;
+}
+
 /* Accept new connections from socket
  * This is:
  * A new client comes in and wants to see the data we have
@@ -489,7 +517,6 @@ static int
 sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
   struct ptybuffer		*p=tino_sock_user(sock);
-  struct ptybuffer_connect	*buf;
   int				fd;
 
   xDP(("sock_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
@@ -518,11 +545,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       xDP(("sock_process() accept %d", fd));
       if (fd<0)
 	return -1;
-      buf	= tino_alloc0(sizeof *buf);
-      buf->p	= p;
-      tino_sock_poll(tino_sock_new_fd(fd, connect_process, buf));
-
-      file_log("connect %d: %d sockets", fd, tino_sock_imp.use);
+      tino_sock_poll(ptybuffer_new_fd(p, fd));
       break;
     }
   xDP(("sock_process() end"));
@@ -535,18 +558,30 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
  * Actually with option -d this is the main program.
  */
 static int
-daemonloop(int sock, int master)
+daemonloop(int sock, int master, struct ptybuffer_params *params)
 {
   struct ptybuffer	work = { 0 };
 
   file_log("main: starting loop");
 
   xDP(("daemonloop(%d,%d)", sock, master));
-  work.sock		= tino_sock_new_fd(sock,   sock_process,   &work);
+
+  /* Treat stdin as the first connect?
+   * This is also set if sock==0
+   * stdin_use is the duped fd (as stdin might be redirected).
+   */
+  if (params->first_connect)
+    work.sock		= ptybuffer_new_fd(&work, params->first_connect);
+
+  if (sock)
+    work.sock		= tino_sock_new_fd(sock, connect_process, &work);
   work.pty		= tino_sock_new_fd(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
   work.forcepoll	= 1;
+
+  work.history_length	= params->history_length<=0 ? 1000 : params->history_length;
+
   /* Actually I should extend this:
    *
    * As long as there is a socket, loop.
@@ -576,6 +611,7 @@ daemonloop(int sock, int master)
 int
 main(int argc, char **argv)
 {
+  struct ptybuffer_params	params;
   pid_t	pid;
   int	master, sock, fd, stderr_saved;
   int	foreground;
@@ -593,11 +629,11 @@ main(int argc, char **argv)
 
   argn	= tino_getopt(argc, argv, 2, 0,
 		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
-#if 0
+#if 1
 		      TINO_GETOPT_DEBUG
 #endif
-		      " sockfile command [args...]",
-
+		      " sockfile command [args...]\n"
+		      "	if sockfile=- then connection comes from stdin.",
 #if 0
 		      TINO_GETOPT_STRING
 		      "b brand	Branding running process name.\n"
@@ -612,14 +648,14 @@ main(int argc, char **argv)
 #endif
 
 		      TINO_GETOPT_FLAG
-		      "d	ptybuffer runs in foreground\n"
+		      "d	ptybuffer runs in foreground (see -s)\n"
 		      "		Else daemonizes: It detaches from the\n"
 		      "		current terminal and changes working dir to /"
 		      , &foreground,
 
 		      TINO_GETOPT_FLAG
 		      "e	Echo input to terminal output.\n"
-		      "		Try this if 'stty echo' fails.\n"
+		      "		Try this if 'stty echo' fails."
 		      , &doecho,
 
 #if 0
@@ -641,16 +677,26 @@ main(int argc, char **argv)
 		      "		When daemonizing use an absolute path!"
 		      , &logfile,
 
+		      TINO_GETOPT_LONGINT
+		      TINO_GETOPT_DEFAULT
 #if 0
-		      TINO_GETOPT_INT
 		      TINO_GETOPT_INT_MIN
 		      TINO_GETOPT_INT_MIN_REF
+#endif
 		      "n count	number of history buckets to allocate\n"
-		      "		Default is 1000 reads (not lines)."
+		      "		Default is " HISTORY_LENGTH " reads (not lines)."
+#if 0
 		      , 0
 		      , &tailsize
-		      , &histsize,
 #endif
+		      , &params.history_length,
+#if 0
+		      atol(HISTORY_LENGTH),
+#endif
+		      TINO_GETOPT_FLAG
+		      "s	use stdin as first connected socket.\n"
+		      "		This is similar to sockfile=- but ptybuffer continues on EOF"
+		      , &params.first_connect,
 
 #if 0
 		      TINO_GETOPT_INT
@@ -699,8 +745,12 @@ main(int argc, char **argv)
   /* Open some file descriptors
    * Do it here such that errors can be intercepted
    * before we fork off the PTY
+   * If sock is - then stdin is the controlling socket.
    */
-  sock	= tino_sock_unix_listen(argv[argn++]);
+  sock	= 0;
+  if (strcmp(argv[argn], "-"))
+    sock	= tino_sock_unix_listen(argv[argn]);
+  argn++;
   fd	= -1;	/* only to skip a warning */
   if (!foreground)
     if ((fd=open("/dev/null", O_RDWR))<0)
@@ -711,6 +761,8 @@ main(int argc, char **argv)
    * This closes stderr, however perhaps we need it later again.
    */
   stderr_saved	= dup(2);
+  if (!sock || params.first_connect)
+    params.first_connect	= dup(0);
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
     {
       char	*env;
@@ -777,5 +829,5 @@ main(int argc, char **argv)
     }
   if (outfile)
     file_log("main: output log: %s", outfile);
-  return daemonloop(sock, master);
+  return daemonloop(sock, master, &params);
 }

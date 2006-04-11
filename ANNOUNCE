@@ -1,1 +1,12 @@
-Corrected bug when daemonizing and options -o and -l were not given
+Slight improvements
+
+New tinolib shall help with "make distclean; make" on Debian Sarge
+
+stdin now can be the controlling socket or can be treated as "the
+first connect".
+
+Option -n to give the history length.
+
+As always this version is nearly untested.
+If you have trouble revert to previous version,
+it's successfully in productive use for a long time now.
