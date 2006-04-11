@@ -1,3 +1,9 @@
+2006-04-12    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (daemonloop): A little typo (wrong cb function) make
+	ptybuffer segfault.  This shows that the abstraction level of
+	tino/sock.h is not high enough yet.
+
 2006-01-30    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (main, daemonloop, master_process): option -n hist

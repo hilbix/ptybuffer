@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.12  2006-04-11 22:44:15  tino
+ * Revision 1.13  2006-04-11 23:00:07  tino
+ * Now working .. now dist
+ *
+ * Revision 1.12  2006/04/11 22:44:15  tino
  * Well, I was too fast already again.  It does not work.  Looking for error.
  *
  * Revision 1.11  2006/04/11 22:08:12  tino
@@ -577,7 +580,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
     work.sock		= ptybuffer_new_fd(&work, params->first_connect);
 
   if (sock)
-    work.sock		= tino_sock_new_fd(sock, connect_process, &work);
+    work.sock		= tino_sock_new_fd(sock, sock_process, &work);
   work.pty		= tino_sock_new_fd(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);

@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.3  2006-04-11 22:44:15  tino
+# Revision 1.4  2006-04-11 23:00:07  tino
+# Now working .. now dist
+#
+# Revision 1.3  2006/04/11 22:44:15  tino
 # Well, I was too fast already again.  It does not work.  Looking for error.
 #
 # Revision 1.2  2004/05/21 10:39:32  tino
@@ -17,12 +20,13 @@
 
 rm -f sock.tmp
 export MALLOC_CHECK_=1
-../ptybuffer sock.tmp ./test.sh &
+../ptybuffer -d sock.tmp ./test.sh &
+KPID=$!
 export MALLOC_CHECK_=0
 sleep 1
 i=0
 
-trap 'echo $i; exit' 0
+trap 'kill $KPID; rm sock.tmp; echo $i; exit' 0
 while accept ">sock.tmp" >/dev/null 2>&1 <&1
 do
 	let i=i+1
