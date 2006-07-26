@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.13  2006-04-11 23:00:07  tino
+ * Revision 1.14  2006-07-26 11:41:14  tino
+ * Option -t
+ *
+ * Revision 1.13  2006/04/11 23:00:07  tino
  * Now working .. now dist
  *
  * Revision 1.12  2006/04/11 22:44:15  tino
@@ -197,6 +200,7 @@ struct ptybuffer_params
   {
     int			first_connect;	/* first connect (dupped stdin)	*/
     long		history_length;
+    long		history_tail;
   };
 struct ptybuffer
   {
@@ -208,6 +212,7 @@ struct ptybuffer
     int			outlen, outpos;
     const char		*out;
     long		history_length;
+    long		history_tail;
   };
 
 struct ptybuffer_connect
@@ -508,6 +513,8 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
 
   buf		= tino_alloc0(sizeof *buf);
   buf->p	= p;
+  if (p->history_tail>=0 && p->history_tail>p->count)
+    buf->screenpos	= p->count-p->history_tail;
   sock		= tino_sock_new_fd(fd, connect_process, buf);
 
   file_log("connect %d: %d sockets", fd, tino_sock_use());
@@ -587,6 +594,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   work.forcepoll	= 1;
 
   work.history_length	= params->history_length<=0 ? 1000 : params->history_length;
+  work.history_tail	= params->history_tail;
 
   /* Actually I should extend this:
    *
@@ -692,8 +700,8 @@ main(int argc, char **argv)
 		      "n nr	number of history buckets to allocate\n"
 		      "		This is read()s and not lines."
 #if 0
-		      , 0l
-		      , &tailsize
+		      , 0
+		      , &params.history_tail
 #endif
 		      , &params.history_length,
 		      HISTORY_LENGTH,
@@ -703,16 +711,20 @@ main(int argc, char **argv)
 		      "		This is similar to sockfile=- but ptybuffer continues on EOF"
 		      , &params.first_connect,
 
-#if 0
 		      TINO_GETOPT_INT
+		      TINO_GETOPT_DEFAULT
+#if 0
 		      TINO_GETOPT_INT_MIN
 		      TINO_GETOPT_INT_MAX_REF
+#endif
 		      "t count	number of tail buckets to print on connect\n"
 		      "		-1=all, else must be less than -n option."
+#if 0
 		      , -1
-		      , &histsize
-		      , &tailsize,
+		      , &params.history_length
 #endif
+		      , &params.history_tail,
+		      -1,
 
 		      TINO_GETOPT_STRING
 		      "o file	write terminal output to file (- to stdout)\n"
