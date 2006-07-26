@@ -6,11 +6,13 @@
 # Not copyrighted as this is just a stub.
 #
 # $Log$
-# Revision 1.1  2004-10-22 01:09:53  tino
-# Makefile via tinolib
+# Revision 1.2  2006-07-26 12:20:21  tino
+# options -c, -f and release
 #
+# Revision 1.1  2004/10/22 01:09:53  tino
+# Makefile via tinolib
 
-      PROGS=ptybuffer
+      PROGS=ptybuffer ptybufferconnect
        OBJS=
        LIBS=
  ADD_CFLAGS=

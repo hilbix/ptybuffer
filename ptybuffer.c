@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.14  2006-07-26 11:41:14  tino
+ * Revision 1.15  2006-07-26 12:20:22  tino
+ * options -c, -f and release
+ *
+ * Revision 1.14  2006/07/26 11:41:14  tino
  * Option -t
  *
  * Revision 1.13  2006/04/11 23:00:07  tino
@@ -62,6 +65,7 @@
  */
 #define HISTORY_LENGTH	1000
 
+#include "tino/file.h"
 #include "tino/dirty.h"
 #include "tino/debug.h"
 #include "tino/fatal.h"
@@ -70,6 +74,7 @@
 #include "tino/slist.h"
 #include "tino/getopt.h"
 
+#include <setjmp.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -620,6 +625,34 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   return 0;
 }
 
+static jmp_buf do_check_jmp;
+
+static void
+do_check_hook(const char *err, va_list list)
+{
+  longjmp(do_check_jmp, 1);
+}
+
+/* Exit 42 if socket apperas living
+ *
+ * else return (which is a mess).
+ */
+static void
+do_check(const char *name)
+{
+  if (!setjmp(do_check_jmp))
+    {
+      tino_sock_error_fn	= do_check_hook;
+      tino_sock_unix_connect(name);
+      /* always a success if we come here
+       */
+      file_log("check: socket up: %s", name);
+      exit(42);
+    }
+  tino_sock_error_fn	= 0;
+}
+
+
 /* This routine is too long
  */
 int
@@ -628,7 +661,7 @@ main(int argc, char **argv)
   struct ptybuffer_params	params;
   pid_t	pid;
   int	master, sock, fd, stderr_saved;
-  int	foreground;
+  int	foreground, check, force;
   int	fds[2];
   int	argn;
 
@@ -641,7 +674,7 @@ main(int argc, char **argv)
   ioctl(0, TIOCGWINSZ, (char *)&winsz);
 #endif
 
-  argn	= tino_getopt(argc, argv, 2, 0,
+  argn	= tino_getopt(argc, argv, 1, 0,
 		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
 #if 0
 		      TINO_GETOPT_DEBUG
@@ -654,12 +687,11 @@ main(int argc, char **argv)
 		      "		You can do 'killall brand' afterwards"
 		      , &brand, 
 #endif
-#if 0
 		      TINO_GETOPT_FLAG
-		      "c	Do nothing (check) if the socket appears to be living.\n"
-		      "		Use with option -f to re-create the socket."
+		      "c	Check if the socket appears to be living.\n"
+		      "		returns 42 if so, 24 if not and no command.\n"
+		      "		Use with option -f to re-create the socket.\n"
 		      , &check,
-#endif
 
 		      TINO_GETOPT_FLAG
 		      "d	ptybuffer runs in foreground (see -s)\n"
@@ -672,11 +704,9 @@ main(int argc, char **argv)
 		      "		Try this if 'stty echo' fails."
 		      , &doecho,
 
-#if 0
 		      TINO_GETOPT_FLAG
 		      "f	force socket creation.  (Also see -c)"
 		      , &force,
-#endif
 
 #if 0
 		      TINO_GETOPT_FLAG
@@ -717,7 +747,7 @@ main(int argc, char **argv)
 		      TINO_GETOPT_INT_MIN
 		      TINO_GETOPT_INT_MAX_REF
 #endif
-		      "t count	number of tail buckets to print on connect\n"
+		      "t nr	number of tail buckets to print on connect\n"
 		      "		-1=all, else must be less than -n option."
 #if 0
 		      , -1
@@ -736,6 +766,18 @@ main(int argc, char **argv)
   xDP(("[argn=%d]", argn));
   if (argn<=0)
     return 1;
+
+  if (check)
+    {
+      do_check(argv[argn]);
+      if (argn+1>=argc)
+	{
+	  file_log("check: socket down: %s", argv[argn]);
+	  return 24;
+	}
+    }
+  else if (argc+1>=argc)
+    ex("missing command");
 
   if (!foreground)
     {
@@ -766,7 +808,11 @@ main(int argc, char **argv)
    */
   sock	= 0;
   if (strcmp(argv[argn], "-"))
-    sock	= tino_sock_unix_listen(argv[argn]);
+    {
+      if (force && !tino_file_notsocket(argv[argn]))
+	unlink(argv[argn]);
+      sock	= tino_sock_unix_listen(argv[argn]);
+    }
   argn++;
   fd	= -1;	/* only to skip a warning */
   if (!foreground)

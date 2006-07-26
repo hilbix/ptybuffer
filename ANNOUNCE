@@ -1,1 +1,3 @@
-Option -t added
+Options -t, -c and -f added
+
+Please ignore "ptybufferconnect", this is not ready yet.

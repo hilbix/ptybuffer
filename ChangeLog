@@ -1,6 +1,7 @@
 2006-07-26    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (ptybuffer_new_fd, main): history_tail added (option -t)
+	(main): options check (-c) and force (-f) added
 
 2006-04-12    <tino@firebird.03.softkill.net>
 
