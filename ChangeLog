@@ -1,3 +1,12 @@
+2006-08-11    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c: dirty.h removed, so changed all occurences of
+	"dirty" names to the full name.
+	(main): renamed HISTORY_LENGTH to PTYBUFFER_HISTORY_LENGTH
+	(main): typo corrected which always gave "missing command" if
+	option -c was not present.
+	(daemonloop): now return void
+
 2006-07-26    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (ptybuffer_new_fd, main): history_tail added (option -t)

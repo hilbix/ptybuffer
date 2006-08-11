@@ -6,8 +6,6 @@ $Header$
 
 - Gracefully abort client sockets on EOF of pty process.
 
-- Make History size configurable.
-
 - Count lines, not blocks.
 
 - Support for CR to overwrite output lines / limited screen mode.
@@ -20,9 +18,22 @@ $Header$
 
 - Remove socket on close.  "Remove by rename."
 
-$Log$
-Revision 1.2  2004-10-22 01:07:48  tino
-modified TODOs after this version
+- When daemonizing parent shall give error status of main
 
-Revision 1.1  2004/05/21 11:17:22  tino
-added
+- Main shall wait for child fork somehow, too, to tell of impossible
+  forks.  Perhaps this can be done with a pipe with flag set to
+  close-on-exec (so it's closed if exec successful).
+
+Possibly:
+
+- Refork client if client terminates.  However unsure how to deal with
+  daemonizing, as CWD then is changed to / and first fork must then
+  always be delayed.
+
+$Log$
+Revision 1.3  2006-08-11 22:09:07  tino
+Bugfix (for missing option -c)
+child status is logged (and returned for option -d)
+
+Revision 1.2  2004/10/22 01:07:48  tino
+modified TODOs after this version

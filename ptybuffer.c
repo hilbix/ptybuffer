@@ -1,7 +1,7 @@
 /* $Header$
  *
  * ptybuffer: daemonize interactive tty line driven programs with output history
- * Copyright (C)2004 Valentin Hilbig, webmaster@scylla-charybdis.com
+ * Copyright (C)2004-2006 Valentin Hilbig, webmaster@scylla-charybdis.com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.15  2006-07-26 12:20:22  tino
+ * Revision 1.16  2006-08-11 22:09:07  tino
+ * Bugfix (for missing option -c)
+ * child status is logged (and returned for option -d)
+ *
+ * Revision 1.15  2006/07/26 12:20:22  tino
  * options -c, -f and release
  *
  * Revision 1.14  2006/07/26 11:41:14  tino
@@ -63,16 +67,18 @@
  * Revision 1.1  2004/05/19 20:22:30  tino
  * first commit
  */
-#define HISTORY_LENGTH	1000
+#ifndef PTYBUFFER_HISTORY_LENGTH
+#define PTYBUFFER_HISTORY_LENGTH	1000
+#endif
 
 #include "tino/file.h"
-#include "tino/dirty.h"
 #include "tino/debug.h"
 #include "tino/fatal.h"
 #include "tino/alloc.h"
 #include "tino/sock.h"
 #include "tino/slist.h"
 #include "tino/getopt.h"
+#include "tino/proc.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -161,7 +167,7 @@ parent(pid_t pid, int *fds)
   int	got;
 
   if (pid==(pid_t)-1)
-    ex("fork");
+    tino_exit("fork");
 
   /* close the writing pipe
    */
@@ -197,7 +203,7 @@ parent(pid_t pid, int *fds)
    */
   file_log("parent: killing main %ld, got error '%s'", (long)pid, buf);
   kill(pid, 9);
-  ex("error: %s", buf);
+  tino_exit("error: %s", buf);
   return -1;
 }
 
@@ -299,7 +305,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  pos++;
 	  cnt	= pos-c->in;
 	  xDP(("connect_process() cnt %d max %d", (int)cnt, (int)c->infill));
-	  FATAL(cnt>c->infill);
+	  tino_FATAL(cnt>c->infill);
 #if 0
 	  if (memchr(c->in, 0, cnt))
 	    c->discard	= 1;	/* line must not contain \0	*/
@@ -383,7 +389,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
     default:
       break;
     }
-  FATAL("connect_process");
+  tino_fatal("connect_process");
   return 0;
 }
 
@@ -412,7 +418,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        *
        * Actually, for now, ptybuffer does not wait at all, sorry.
        */
-      FATAL(sock!=p->pty);
+      tino_FATAL(sock!=p->pty);
       p->pty	= 0;
       file_log("close master");
       return TINO_SOCK_CLOSE;
@@ -506,7 +512,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
     default:
       break;
     }
-  FATAL("master_process");
+  tino_fatal("master_process");
   return 0;
 }
 
@@ -541,12 +547,12 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
   switch (type)
     {
     default:
-      FATAL("sock_process");
+      tino_fatal("sock_process");
 
     case TINO_SOCK_PROC_CLOSE:
       file_log("close socket");
       xDP(("sock_process() CLOSE"));
-      FATAL(sock!=p->sock);
+      tino_FATAL(sock!=p->sock);
       p->sock	= 0;
       return TINO_SOCK_CLOSE;
       
@@ -575,7 +581,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
  *
  * Actually with option -d this is the main program.
  */
-static int
+static void
 daemonloop(int sock, int master, struct ptybuffer_params *params)
 {
   struct ptybuffer	work = { 0 };
@@ -620,9 +626,8 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
       tmp		= work.forcepoll;
       work.forcepoll	= 0;
       if (tino_sock_select(tmp)<0)
-	ex("select");
+	tino_exit("select");
     }
-  return 0;
 }
 
 static jmp_buf do_check_jmp;
@@ -652,6 +657,16 @@ do_check(const char *name)
   tino_sock_error_fn	= 0;
 }
 
+static int
+log_childstatus(pid_t pid)
+{
+  char	*buf;
+  int	ret;
+
+  ret	= tino_wait_child_exact(pid, &buf);
+  file_log("child: %s", buf);
+  return ret;
+}
 
 /* This routine is too long
  */
@@ -690,7 +705,7 @@ main(int argc, char **argv)
 		      TINO_GETOPT_FLAG
 		      "c	Check if the socket appears to be living.\n"
 		      "		returns 42 if so, 24 if not and no command.\n"
-		      "		Use with option -f to re-create the socket.\n"
+		      "		Use with option -f to re-create the socket."
 		      , &check,
 
 		      TINO_GETOPT_FLAG
@@ -734,7 +749,7 @@ main(int argc, char **argv)
 		      , &params.history_tail
 #endif
 		      , &params.history_length,
-		      HISTORY_LENGTH,
+		      PTYBUFFER_HISTORY_LENGTH,
 
 		      TINO_GETOPT_FLAG
 		      "s	use stdin as first connected socket.\n"
@@ -776,8 +791,8 @@ main(int argc, char **argv)
 	  return 24;
 	}
     }
-  else if (argc+1>=argc)
-    ex("missing command");
+  else if (argn+1>=argc)
+    tino_exit("missing command");
 
   if (!foreground)
     {
@@ -786,7 +801,7 @@ main(int argc, char **argv)
        * such that errors are propagated to the caller
        */
       if (pipe(fds))
-	ex("pipe");
+	tino_exit("pipe");
 
       /* fork off a child
        */
@@ -817,7 +832,7 @@ main(int argc, char **argv)
   fd	= -1;	/* only to skip a warning */
   if (!foreground)
     if ((fd=open("/dev/null", O_RDWR))<0)
-      ex("/dev/null");
+      tino_exit("/dev/null");
 
   /* Now fork off the PTY thread
    *
@@ -859,10 +874,10 @@ main(int argc, char **argv)
       /* Tell about the error
        */
       file_log("child: exec failed");
-      ex("execvp %s", argv[argn]);
+      tino_exit("execvp %s", argv[argn]);
     }
   if (pid==(pid_t)-1)
-    ex("forkpty");
+    tino_exit("forkpty");
   close(stderr_saved);
   file_log("main: forked child %ld", (long)pid);
 
@@ -892,5 +907,8 @@ main(int argc, char **argv)
     }
   if (outfile)
     file_log("main: output log: %s", outfile);
-  return daemonloop(sock, master, &params);
+
+  daemonloop(sock, master, &params);
+
+  return log_childstatus(pid);
 }

@@ -11,6 +11,7 @@ head test/test.sh
 Changes
 =======
 
+2006-08-11 0.5.1	bugfix: did not work without -c any more
 2006-06-26 0.5.0	options -t, -c, -f
 2006-04-12 0.4.0	worksock from stdin, fresh tinolib, histsize
 2004-11-12 0.3.1	buffix options -l and -o
@@ -155,7 +156,11 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.5  2006-07-26 12:20:21  tino
+Revision 1.6  2006-08-11 22:09:07  tino
+Bugfix (for missing option -c)
+child status is logged (and returned for option -d)
+
+Revision 1.5  2006/07/26 12:20:21  tino
 options -c, -f and release
 
 Revision 1.4  2006/04/11 22:08:12  tino
