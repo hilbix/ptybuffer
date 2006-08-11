@@ -9,7 +9,10 @@
 #	http://www.scylla-charybdis.com/download/
 #
 # $Log$
-# Revision 1.5  2004-10-22 01:09:09  tino
+# Revision 1.6  2006-08-11 22:05:40  tino
+# Little improvemtns to tests
+#
+# Revision 1.5  2004/10/22 01:09:09  tino
 # now shows environment
 #
 # Revision 1.4  2004/05/23 10:12:23  tino
@@ -24,6 +27,7 @@
 # Revision 1.1  2004/05/19 20:22:23  tino
 # Test script added
 
+unset MALLOC_CHECK_
 while	echo "==============================================================================="
 do
 	set

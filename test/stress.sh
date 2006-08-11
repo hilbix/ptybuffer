@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.4  2006-04-11 23:00:07  tino
+# Revision 1.5  2006-08-11 22:05:40  tino
+# Little improvemtns to tests
+#
+# Revision 1.4  2006/04/11 23:00:07  tino
 # Now working .. now dist
 #
 # Revision 1.3  2006/04/11 22:44:15  tino
@@ -20,9 +23,9 @@
 
 rm -f sock.tmp
 export MALLOC_CHECK_=1
-../ptybuffer -d sock.tmp ./test.sh &
+../ptybuffer -l- -d sock.tmp ./test.sh &
 KPID=$!
-export MALLOC_CHECK_=0
+unset MALLOC_CHECK_
 sleep 1
 i=0
 
