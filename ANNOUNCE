@@ -1,6 +1,3 @@
-Bugfix release.  Did not work any more without option -c
+Another bugfix release.
 
-If option -d is present ptybuffer now returns the exit status of the
-child.  Else you can only see it in the log (option -l).
-
-Still please ignore "ptybufferconnect", this is not ready yet.
+There was a typo when reporting the exit status of the child referencing an uninitialized variable.
