@@ -1,7 +1,7 @@
 /* $Header$
  *
  * ptybuffer: daemonize interactive tty line driven programs with output history
- * Copyright (C)2004-2006 Valentin Hilbig, webmaster@scylla-charybdis.com
+ * Copyright (C)2004-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.16  2006-08-11 22:09:07  tino
+ * Revision 1.17  2007-03-04 02:49:18  tino
+ * Commit for dist, see ChanegLog
+ *
+ * Revision 1.16  2006/08/11 22:09:07  tino
  * Bugfix (for missing option -c)
  * child status is logged (and returned for option -d)
  *
@@ -79,6 +82,7 @@
 #include "tino/slist.h"
 #include "tino/getopt.h"
 #include "tino/proc.h"
+#include "tino/filetool.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -95,28 +99,82 @@
 #include "ptybuffer_version.h"
 
 static char	*outfile, *logfile;
-static int	doecho;
+static int	doecho, dotimestamp;
+
+static FILE *
+file_open(FILE *fd, const char *name)
+{
+  if (name && strcmp(name, "-"))
+    fd	= fopen(name, "a+");
+  return fd;
+}
+
+static void
+file_flush_close(FILE *fd)
+{
+  if (fd==stdout || fd==stderr)
+    fflush(fd);
+  else
+    fclose(fd);
+}
+
+static void
+file_timestamp(FILE *fd, int showpid)
+{
+  static pid_t	pid;
+  struct tm	tm;
+  time_t	tim;
+
+  time(&tim);
+  gmtime_r(&tim, &tm);
+  fprintf(fd,
+	  "%4d-%02d-%02d %02d:%02d:%02d %ld: ",
+	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
+	  tm.tm_hour, tm.tm_min, tm.tm_sec,
+	  (long)pid);
+  if (showpid)
+    {
+      if (!pid)
+	pid	= getpid();
+      fprintf(fd, "%ld: ", (long)pid);
+    }
+}
 
 /* Do you have a better idea?
  *
  * The file must be always flushed and I want you to be able to always
  * rotate the file without anything to keep in mind.
  */
-static __inline__ void
+static void
 file_out(void *ptr, size_t len)
 {
-  FILE	*fd;
+  static int	in_line;
+  FILE		*fd;
 
-  fd	= stdout;
-  if (!outfile ||
-      (strcmp(outfile, "-") && (fd=fopen(outfile, "a+"))==0))
+  if ((fd=file_open(stdout, outfile))==0)
     return;
-
-  fwrite(ptr, len, 1, fd);
-  if (fd==stdout)
-    fflush(fd);
+  if (!dotimestamp)
+    fwrite(ptr, len, 1, fd);
   else
-    fclose(fd);
+    while (len)
+      {
+	int	i;
+
+	if (!in_line)
+	  file_timestamp(fd, 0);
+	in_line	= 1;
+	for (i=0; i<len; i++)
+	  if (((char *)ptr)[i]=='\n')
+	    {
+	      in_line	= 0;
+	      i++;
+	      break;
+	    }
+	fwrite(ptr, i, 1, fd);
+	((char *)ptr)	+= i;
+	len		-= i;
+      }
+  file_flush_close(fd);
 }
 
 /* do not call this before the last fork
@@ -126,33 +184,18 @@ file_log(const char *s, ...)
 {
   FILE		*fd;
   va_list	list;
-  struct tm	tm;
-  time_t	tim;
-  static pid_t	pid;
 
-  fd	= stderr;
-  if (!logfile ||
-      (strcmp(logfile, "-") && (fd=fopen(logfile, "a+"))==0))
+  if ((fd=file_open(stderr, logfile))==0)
     return;
 
-  time(&tim);
-  gmtime_r(&tim, &tm);
-  if (!pid)
-    pid	= getpid();
-  fprintf(fd,
-	  "%4d-%02d-%02d %02d:%02d:%02d %ld: ",
-	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
-	  tm.tm_hour, tm.tm_min, tm.tm_sec,
-	  (long)pid);
+  file_timestamp(fd, 1);
+
   va_start(list, s);
   vfprintf(fd, s, list);
   va_end(list);
   fputc('\n', fd);
-  if (fd==stderr)
-    fflush(fd);
-  else
-    fclose(fd);
-  return;
+
+  file_flush_close(fd);
 }
 
 /* main parent:
@@ -420,7 +463,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       tino_FATAL(sock!=p->pty);
       p->pty	= 0;
-      file_log("close master");
+      file_log("main: close master");
       return TINO_SOCK_CLOSE;
 
     case TINO_SOCK_PROC_EOF:
@@ -633,7 +676,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 static jmp_buf do_check_jmp;
 
 static void
-do_check_hook(const char *err, va_list list)
+do_check_hook(const char *err, TINO_VA_LIST list)
 {
   longjmp(do_check_jmp, 1);
 }
@@ -664,7 +707,7 @@ log_childstatus(pid_t pid)
   int	ret;
 
   ret	= tino_wait_child_exact(pid, &buf);
-  file_log("child: %s", buf);
+  file_log("main: child %s", buf);
   return ret;
 }
 
@@ -696,6 +739,10 @@ main(int argc, char **argv)
 #endif
 		      " sockfile command [args...]\n"
 		      "	if sockfile=- then connection comes from stdin.",
+
+		      TINO_GETOPT_USAGE
+		      "h	This help"
+		      ,
 #if 0
 		      TINO_GETOPT_STRING
 		      "b brand	Branding running process name.\n"
@@ -732,24 +779,19 @@ main(int argc, char **argv)
 #endif
 
 		      TINO_GETOPT_STRING
-		      "l file	write activity log to file (- to stderr)\n"
-		      "		When daemonizing use an absolute path!"
+		      "l file	write activity log to file (- to stderr)"
 		      , &logfile,
 
 		      TINO_GETOPT_LONGINT
 		      TINO_GETOPT_DEFAULT
-#if 0
-		      TINO_GETOPT_INT_MIN
-		      TINO_GETOPT_INT_MIN_REF
-#endif
+		      TINO_GETOPT_MIN
+		      TINO_GETOPT_MIN_PTR
 		      "n nr	number of history buckets to allocate\n"
 		      "		This is read()s and not lines."
-#if 0
-		      , 0
 		      , &params.history_tail
-#endif
 		      , &params.history_length,
 		      PTYBUFFER_HISTORY_LENGTH,
+		      1,
 
 		      TINO_GETOPT_FLAG
 		      "s	use stdin as first connected socket.\n"
@@ -758,22 +800,17 @@ main(int argc, char **argv)
 
 		      TINO_GETOPT_INT
 		      TINO_GETOPT_DEFAULT
-#if 0
-		      TINO_GETOPT_INT_MIN
-		      TINO_GETOPT_INT_MAX_REF
-#endif
+		      TINO_GETOPT_MIN
+		      TINO_GETOPT_MAX_PTR
 		      "t nr	number of tail buckets to print on connect\n"
 		      "		-1=all, else must be less than -n option."
-#if 0
-		      , -1
 		      , &params.history_length
-#endif
 		      , &params.history_tail,
+		      -1,
 		      -1,
 
 		      TINO_GETOPT_STRING
-		      "o file	write terminal output to file (- to stdout)\n"
-		      "		When daemonizing use an absolute path!"
+		      "o file	write terminal output to file (- to stdout)"
 		      , &outfile,
 
 		      NULL
@@ -781,6 +818,11 @@ main(int argc, char **argv)
   xDP(("[argn=%d]", argn));
   if (argn<=0)
     return 1;
+
+  if (logfile)
+    logfile	= tino_file_realpath(NULL, 0, logfile);
+  if (outfile)
+    outfile	= tino_file_realpath(NULL, 0, outfile);
 
   if (check)
     {
@@ -814,6 +856,16 @@ main(int argc, char **argv)
        */
       close(fds[0]);
       setsid();
+
+      /* XXX TODO Bug?
+       *
+       * We are the session group leader.  Is there a way to attach a
+       * controlling terminal to it?  Following suggests this can happen:
+       * http://www.unixguide.net/unix/programming/1.7.shtml
+       *
+       * For beeing a tty driver, it perhaps makes sense to be a
+       * session group leader ..  Unclear ..
+       */
     }
 
   /* Open some file descriptors

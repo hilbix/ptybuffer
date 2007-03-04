@@ -2,9 +2,11 @@ daemonize interactive tty line driven programs with output history
 # $Header$
 #
 # $Log$
-# Revision 1.1  2004-11-12 04:45:00  tino
-# NULL pointer dereference corrected and minor logging improvements
+# Revision 1.2  2007-03-04 02:49:18  tino
+# Commit for dist, see ChanegLog
 #
+# Revision 1.1  2004/11/12 04:45:00  tino
+# NULL pointer dereference corrected and minor logging improvements
 
 ptybuffer was designed to get rid of screen/expect constructs to improve
 stability.  It deamonizes programs which need a tty/pty to operate.  Unix
@@ -25,3 +27,6 @@ http://your.server.name/~yourlogin/shell/all.php?port=shell
 </pre>
 If you don't understand this, don't even try it.  It's too dangerous!
 </TD></TR></TABLE>
+
+Note: To connect to the ptybuffer socket you need a tool
+like <a href="http://freshmeat.net/projects/socat/">socat</a>.

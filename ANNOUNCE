@@ -1,3 +1,8 @@
-Another bugfix release.
+logfile and outfile are now using realpath,
+so you no more need to give absolute paths on daemonizing.
 
-There was a typo when reporting the exit status of the child referencing an uninitialized variable.
+Also logging made more clear and an example cron script
+script/autostart.sh added.
+
+Current version of tinolib has Ubuntu 64 bit fixes and some
+minor changes.
