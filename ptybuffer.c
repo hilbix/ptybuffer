@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.17  2007-03-04 02:49:18  tino
+ * Revision 1.18  2007-03-25 23:33:29  tino
+ * Now shall be able to output log/outfiles again
+ *
+ * Revision 1.17  2007/03/04 02:49:18  tino
  * Commit for dist, see ChanegLog
  *
  * Revision 1.16  2006/08/11 22:09:07  tino
@@ -98,8 +101,9 @@
 
 #include "ptybuffer_version.h"
 
-static char	*outfile, *logfile;
-static int	doecho, dotimestamp;
+static const char	*outfile, *logfile;
+static int		doecho, dotimestamp;
+static pid_t		mypid;
 
 static FILE *
 file_open(FILE *fd, const char *name)
@@ -121,23 +125,22 @@ file_flush_close(FILE *fd)
 static void
 file_timestamp(FILE *fd, int showpid)
 {
-  static pid_t	pid;
   struct tm	tm;
   time_t	tim;
 
   time(&tim);
   gmtime_r(&tim, &tm);
   fprintf(fd,
-	  "%4d-%02d-%02d %02d:%02d:%02d %ld: ",
+	  "%4d-%02d-%02d %02d:%02d:%02d",
 	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
-	  tm.tm_hour, tm.tm_min, tm.tm_sec,
-	  (long)pid);
+	  tm.tm_hour, tm.tm_min, tm.tm_sec);
   if (showpid)
     {
-      if (!pid)
-	pid	= getpid();
-      fprintf(fd, "%ld: ", (long)pid);
+      if (!mypid)
+	mypid	= getpid();
+      fprintf(fd, " %ld", (long)mypid);
     }
+  fprintf(fd, ": ");
 }
 
 /* Do you have a better idea?
@@ -820,9 +823,15 @@ main(int argc, char **argv)
     return 1;
 
   if (logfile)
-    logfile	= tino_file_realpath(NULL, 0, logfile);
+    {
+      logfile	= tino_file_realpath(logfile);
+      file_log("status log: %s", logfile);
+    }
   if (outfile)
-    outfile	= tino_file_realpath(NULL, 0, outfile);
+    {
+      outfile	= tino_file_realpath(outfile);
+      file_log("output log: %s", outfile);
+    }
 
   if (check)
     {
@@ -849,6 +858,7 @@ main(int argc, char **argv)
        */
       if ((pid=fork())!=0)
 	return parent(pid, fds);
+      mypid	= 0;
 
       /* child:
        * Close the reading pipe
@@ -896,6 +906,8 @@ main(int argc, char **argv)
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
     {
       char	*env;
+
+      mypid	= 0;
 
       /* Close the writing pipe
        * and all other not needed file descriptors.
@@ -957,8 +969,6 @@ main(int argc, char **argv)
       write(fds[1], "OK", 2);
       close(fds[1]);
     }
-  if (outfile)
-    file_log("main: output log: %s", outfile);
 
   daemonloop(sock, master, &params);
 
