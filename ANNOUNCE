@@ -1,8 +1,4 @@
-logfile and outfile are now using realpath,
-so you no more need to give absolute paths on daemonizing.
+Bugfix release (do not use 0.5.3!)
 
-Also logging made more clear and an example cron script
-script/autostart.sh added.
-
-Current version of tinolib has Ubuntu 64 bit fixes and some
-minor changes.
+logfile and outfile are now working again.
+script/autostart.sh now shall work as expected, too.
