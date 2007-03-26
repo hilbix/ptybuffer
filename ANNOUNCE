@@ -1,4 +1,1 @@
-Bugfix release (do not use 0.5.3!)
-
-logfile and outfile are now working again.
-script/autostart.sh now shall work as expected, too.
+Bugfix release for CygWin
