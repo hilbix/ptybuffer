@@ -18,7 +18,10 @@
 # Written by Valentin Hilbig <webmaster@scylla-charybdis.com>
 #
 # $Log$
-# Revision 1.2  2007-03-25 23:33:02  tino
+# Revision 1.3  2007-03-31 21:17:06  tino
+# Forgot to change "echo" into "log" calls
+#
+# Revision 1.2  2007/03/25 23:33:02  tino
 # Fixed + better logging
 #
 # Revision 1.1  2007/03/04 02:49:18  tino
@@ -53,9 +56,9 @@ do
 	ptybuffer -l "$RUNDIR/$b.log" -o "$RUNDIR/$b.out" -cf "$RUNDIR/$b.sock" "$a"
 	ret="$?"
 	case "$ret" in
-	0)	echo "startd $b"; [ -z "$1" ] || sleep "$1";;
-	42)	echo "ok $b";;
-	*)	echo "OOPS $b ($ret)" >&2; ex=1;;
+	0)	log "startd $b"; [ -z "$1" ] || sleep "$1";;
+	42)	log "ok $b";;
+	*)	log "OOPS $b ($ret)" >&2; ex=1;;
 	esac
 done
 exit $ex

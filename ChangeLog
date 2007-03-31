@@ -1,3 +1,7 @@
+2007-03-31    <tino@firebird.03.softkill.net>
+
+	* script/autostart.sh (for): Forgot to change echo into log
+
 2007-03-26    <tino@firebird.03.softkill.net>
 
 	* script/autostart.sh (log): added better logging
