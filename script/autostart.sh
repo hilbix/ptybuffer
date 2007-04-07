@@ -18,7 +18,10 @@
 # Written by Valentin Hilbig <webmaster@scylla-charybdis.com>
 #
 # $Log$
-# Revision 1.3  2007-03-31 21:17:06  tino
+# Revision 1.4  2007-04-07 11:30:18  tino
+# Typo + PATH envvar (for cron usage)
+#
+# Revision 1.3  2007/03/31 21:17:06  tino
 # Forgot to change "echo" into "log" calls
 #
 # Revision 1.2  2007/03/25 23:33:02  tino
@@ -28,6 +31,8 @@
 # Commit for dist, see ChanegLog
 
 cd || exit
+
+PATH="$HOME/bin:/usr/local/bin:$PATH"
 
 RUNDIR="/var/log/autostart"
 [ -w "$RUNDIR" ] || RUNDIR="/var/tmp/autostart"
@@ -56,7 +61,7 @@ do
 	ptybuffer -l "$RUNDIR/$b.log" -o "$RUNDIR/$b.out" -cf "$RUNDIR/$b.sock" "$a"
 	ret="$?"
 	case "$ret" in
-	0)	log "startd $b"; [ -z "$1" ] || sleep "$1";;
+	0)	log "started $b"; [ -z "$1" ] || sleep "$1";;
 	42)	log "ok $b";;
 	*)	log "OOPS $b ($ret)" >&2; ex=1;;
 	esac
