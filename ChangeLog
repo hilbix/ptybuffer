@@ -1,3 +1,8 @@
+2007-04-07    <tino@firebird.03.softkill.net>
+
+	* script/autostart.sh: Typo corrected (startd -> started)
+	* script/autostart.sh (PATH): added in case it's used from cron
+
 2007-03-31    <tino@firebird.03.softkill.net>
 
 	* script/autostart.sh (for): Forgot to change echo into log
