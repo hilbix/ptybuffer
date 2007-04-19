@@ -18,7 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * $Log$
- * Revision 1.18  2007-03-25 23:33:29  tino
+ * Revision 1.19  2007-04-19 17:22:04  tino
+ * Minor changes
+ *
+ * Revision 1.18  2007/03/25 23:33:29  tino
  * Now shall be able to output log/outfiles again
  *
  * Revision 1.17  2007/03/04 02:49:18  tino
@@ -149,10 +152,11 @@ file_timestamp(FILE *fd, int showpid)
  * rotate the file without anything to keep in mind.
  */
 static void
-file_out(void *ptr, size_t len)
+file_out(void *_ptr, size_t len)
 {
   static int	in_line;
   FILE		*fd;
+  char		*ptr=_ptr;
 
   if ((fd=file_open(stdout, outfile))==0)
     return;
@@ -174,8 +178,8 @@ file_out(void *ptr, size_t len)
 	      break;
 	    }
 	fwrite(ptr, i, 1, fd);
-	((char *)ptr)	+= i;
-	len		-= i;
+	ptr	+= i;
+	len	-= i;
       }
   file_flush_close(fd);
 }
@@ -684,7 +688,7 @@ do_check_hook(const char *err, TINO_VA_LIST list)
   longjmp(do_check_jmp, 1);
 }
 
-/* Exit 42 if socket apperas living
+/* Exit 42 if socket appears living
  *
  * else return (which is a mess).
  */
@@ -749,7 +753,7 @@ main(int argc, char **argv)
 #if 0
 		      TINO_GETOPT_STRING
 		      "b brand	Branding running process name.\n"
-		      "		You can do 'killall brand' afterwards"
+		      "		You can do 'killall brand' afterwards (use - for default)"
 		      , &brand, 
 #endif
 		      TINO_GETOPT_FLAG
