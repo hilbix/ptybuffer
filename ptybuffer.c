@@ -19,7 +19,10 @@
  * USA
  *
  * $Log$
- * Revision 1.20  2007-04-29 21:28:26  tino
+ * Revision 1.21  2007-04-29 21:32:04  tino
+ * *** empty log message ***
+ *
+ * Revision 1.20  2007/04/29 21:28:26  tino
  * SIGCHLD now is delivered
  *
  * Revision 1.19  2007/04/19 17:22:04  tino
@@ -101,8 +104,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <signal.h>
 
 #include <pty.h>
 #include <utmp.h>

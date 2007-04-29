@@ -2,9 +2,8 @@
 
 	* ptybuffer.c (parent): SIGPIPE blocking moved here (I do not
 	remember why I needed this, perhaps it was just to be sure).
-	(main): When postforking (default on CygWin) a returning child did
-	not break the accept() immediately.  Now the process reacts on
-	SIGCHLD.
+	(main): When the child returns, SIGCHLD is delivered to the
+	process immediately.
 
 2007-04-19    <tino@firebird.03.softkill.net>
 
