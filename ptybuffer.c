@@ -3,22 +3,26 @@
  * ptybuffer: daemonize interactive tty line driven programs with output history
  * Copyright (C)2004-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA
  *
  * $Log$
- * Revision 1.19  2007-04-19 17:22:04  tino
+ * Revision 1.20  2007-04-29 21:28:26  tino
+ * SIGCHLD now is delivered
+ *
+ * Revision 1.19  2007/04/19 17:22:04  tino
  * Minor changes
  *
  * Revision 1.18  2007/03/25 23:33:29  tino
@@ -89,6 +93,7 @@
 #include "tino/getopt.h"
 #include "tino/proc.h"
 #include "tino/filetool.h"
+#include "tino/signals.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -215,6 +220,8 @@ parent(pid_t pid, int *fds)
 {
   char	buf[BUFSIZ];
   int	got;
+
+  tino_sigign(SIGPIPE);		/* make sure we do not get this signal	*/
 
   if (pid==(pid_t)-1)
     tino_exit("fork");
@@ -730,7 +737,7 @@ main(int argc, char **argv)
   int	fds[2];
   int	argn;
 
-  signal(SIGPIPE, SIG_IGN);
+  tino_sigdummy(SIGCHLD);	/* make sure we get EINTR on SIGCHLD	*/
 
 #if 0
   struct termios	tio;
