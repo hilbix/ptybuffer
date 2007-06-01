@@ -1,3 +1,14 @@
+2007-06-01    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (main): outfile - and logfile - now do work again.
+	(main): SIGPIPE now is ignored globally, lools like the previous
+	change (form 2007-04-29) was complete crap ..
+	(file_open): logfile and outfile are no more written if no
+	filename is given on commandline.  As - works again, you
+	log/output to stderr/stdout again.
+	(file_log): Now has no sideffects on errno.  Errno must not be
+	changed by the (new) error logging of the accept() call.
+
 2007-04-29    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (parent): SIGPIPE blocking moved here (I do not

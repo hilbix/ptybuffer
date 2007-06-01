@@ -1,1 +1,25 @@
-Minor changes
+Bufix and minor improvement release.
+
+DO NOT USE VERSION 0.5.9!  Use 0.5.8 or 0.5.10 instead.
+
+I moved SIGPIPE out of main and just ignored it in the part which goes
+away for daemonizing.  Apparently SIGPIPE must be ignored in the
+resident part, too, as it sometimes shows up.  Dunno why.  Also dunno
+why the program just goes away (SIG_DFL?).  Now SIGPIPE shall no more
+make trouble.
+
+A second bug was, when it came to logging.  The argument '-' (log/out
+to stderr/out) was no more correctly processed for logfiles.  Also
+another change now is, that logging by default is turned off
+completely, so you must enable it and use '-' if you want the old
+(intermediate, I think it wasn't there from the beginning) behavior.
+
+The minor improvement is, that ptybuffer now hands out the number of
+skipped bytes at the beginning, to ease script development to
+re-attach to ptybuffer.  Still not perfect though, there shall be some
+better way to negotiate content positions.
+
+Also some minor changes to reflect the new library routine names.
+
+This version is released even more early to fix the bug, so it's
+nearly untested.

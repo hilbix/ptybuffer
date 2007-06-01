@@ -19,7 +19,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.22  2007-06-01 10:52:48  tino
+ * Revision 1.23  2007-06-01 11:54:49  tino
+ * Next dist quickly
+ *
+ * Revision 1.22  2007/06/01 10:52:48  tino
  * Buggy version .. test/stress.sh does not work anymore!?
  *
  * Revision 1.20  2007/04/29 21:28:26  tino
@@ -99,7 +102,9 @@ static pid_t		mypid;
 static FILE *
 file_open(FILE *fd, const char *name)
 {
-  if (name && strcmp(name, "-"))
+  if (!name)
+    return 0;
+  if (strcmp(name, "-"))
     fd	= fopen(name, "a+");
   return fd;
 }
@@ -179,9 +184,14 @@ file_log(const char *s, ...)
 {
   FILE		*fd;
   va_list	list;
+  int		e;
 
+  e	= errno;
   if ((fd=file_open(stderr, logfile))==0)
-    return;
+    {
+      errno	= e;
+      return;
+    }
 
   file_timestamp(fd, 1);
 
@@ -191,6 +201,8 @@ file_log(const char *s, ...)
   fputc('\n', fd);
 
   file_flush_close(fd);
+
+  errno	= e;
 }
 
 /* main parent:
@@ -203,8 +215,6 @@ parent(pid_t pid, int *fds)
 {
   char	buf[BUFSIZ];
   int	got;
-
-  tino_sigign(SIGPIPE);		/* make sure we do not get this signal	*/
 
   if (pid==(pid_t)-1)
     tino_exit("fork");
@@ -611,12 +621,12 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
     case TINO_SOCK_PROC_WRITE:
     case TINO_SOCK_PROC_ACCEPT:
       xDP(("sock_process() accept"));
-      fd	= accept(tino_sock_fdO(sock), NULL, NULL);
+      fd	= tino_sock_acceptI(tino_sock_fdO(sock));
       xDP(("sock_process() accept %d", fd));
       if (fd<0)
 	{
 	  file_log("accept: returned error %s", strerror(errno));
-	  return 0;
+	  return -1;
 	}
       tino_sock_pollOn(ptybuffer_new_fd(p, fd));
       break;
@@ -729,6 +739,7 @@ main(int argc, char **argv)
   int	fds[2];
   int	argn;
 
+  tino_sigign(SIGPIPE);		/* make sure we do not get this signal	*/
   tino_sigdummy(SIGCHLD);	/* make sure we get EINTR on SIGCHLD	*/
 
 #if 0
@@ -827,12 +838,14 @@ main(int argc, char **argv)
 
   if (logfile)
     {
-      logfile	= tino_file_realpath(logfile);
+      if (strcmp(logfile, "-"))
+	logfile	= tino_file_realpath(logfile);
       file_log("status log: %s", logfile);
     }
   if (outfile)
     {
-      outfile	= tino_file_realpath(outfile);
+      if (strcmp(outfile, "-"))
+	outfile	= tino_file_realpath(outfile);
       file_log("output log: %s", outfile);
     }
 

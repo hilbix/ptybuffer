@@ -6,7 +6,10 @@
 # Not copyrighted as this is just a stub.
 #
 # $Log$
-# Revision 1.3  2007-06-01 11:19:22  tino
+# Revision 1.4  2007-06-01 11:54:49  tino
+# Next dist quickly
+#
+# Revision 1.3  2007/06/01 11:19:22  tino
 # Bugfix version (still dunno where the bug is)
 #
 # Revision 1.2  2006/07/26 12:20:21  tino
@@ -28,7 +31,7 @@ ADD_LDFLAGS=
 #    TINOLIB=tino/lib.h
 # DBG_CFLAGS=
 #DBG_LDFLAGS=
- DBG_LDLIBS=-lefence
+# DBG_LDLIBS=-lefence
 # STD_CFLAGS=
 #STD_LDFLAGS=
 # STD_LDLIBS=
