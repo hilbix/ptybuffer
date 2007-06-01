@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.6  2007-06-01 10:52:48  tino
+# Revision 1.7  2007-06-01 11:19:22  tino
+# Bugfix version (still dunno where the bug is)
+#
+# Revision 1.6  2007/06/01 10:52:48  tino
 # Buggy version .. test/stress.sh does not work anymore!?
 #
 # Revision 1.5  2006/08/11 22:05:40  tino
@@ -26,8 +29,8 @@
 
 rm -f sock.tmp
 export MALLOC_CHECK_=1
+#../ptybuffer -o- -d sock.tmp ./test.sh &
 ../ptybuffer -d sock.tmp ./test.sh &
-#../ptybuffer sock.tmp ./test.sh &
 KPID=$!
 unset MALLOC_CHECK_
 sleep 1
