@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.7  2007-06-01 11:19:22  tino
+# Revision 1.8  2007-06-01 11:54:24  tino
+# Now output works as expected
+#
+# Revision 1.7  2007/06/01 11:19:22  tino
 # Bugfix version (still dunno where the bug is)
 #
 # Revision 1.6  2007/06/01 10:52:48  tino
@@ -25,12 +28,11 @@
 #
 # Revision 1.1  2004/05/21 09:56:20  tino
 # Test script added to find weird bug
-#
 
+cd "`dirname "$0"`" || exit 1
 rm -f sock.tmp
 export MALLOC_CHECK_=1
-#../ptybuffer -o- -d sock.tmp ./test.sh &
-../ptybuffer -d sock.tmp ./test.sh &
+../ptybuffer -l- -d sock.tmp ./test.sh &
 KPID=$!
 unset MALLOC_CHECK_
 sleep 1
