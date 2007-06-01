@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.5  2006-08-11 22:05:40  tino
+# Revision 1.6  2007-06-01 10:52:48  tino
+# Buggy version .. test/stress.sh does not work anymore!?
+#
+# Revision 1.5  2006/08/11 22:05:40  tino
 # Little improvemtns to tests
 #
 # Revision 1.4  2006/04/11 23:00:07  tino
@@ -23,14 +26,17 @@
 
 rm -f sock.tmp
 export MALLOC_CHECK_=1
-../ptybuffer -l- -d sock.tmp ./test.sh &
+../ptybuffer -d sock.tmp ./test.sh &
+#../ptybuffer sock.tmp ./test.sh &
 KPID=$!
 unset MALLOC_CHECK_
 sleep 1
 i=0
 
 trap 'kill $KPID; rm sock.tmp; echo $i; exit' 0
-while accept ">sock.tmp" >/dev/null 2>&1 <&1
+while	accept ">sock.tmp" >/dev/null 2>&1 <&1 ||
+	accept ">sock.tmp" >/dev/null 2>&1 <&1
+
 do
 	let i=i+1
 #	echo -n "$i"

@@ -15,18 +15,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
- * USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.21  2007-04-29 21:32:04  tino
- * *** empty log message ***
+ * Revision 1.22  2007-06-01 10:52:48  tino
+ * Buggy version .. test/stress.sh does not work anymore!?
  *
  * Revision 1.20  2007/04/29 21:28:26  tino
  * SIGCHLD now is delivered
- *
- * Revision 1.19  2007/04/19 17:22:04  tino
- * Minor changes
  *
  * Revision 1.18  2007/03/25 23:33:29  tino
  * Now shall be able to output log/outfiles again
@@ -44,29 +41,17 @@
  * Revision 1.14  2006/07/26 11:41:14  tino
  * Option -t
  *
- * Revision 1.13  2006/04/11 23:00:07  tino
- * Now working .. now dist
- *
  * Revision 1.12  2006/04/11 22:44:15  tino
  * Well, I was too fast already again.  It does not work.  Looking for error.
  *
- * Revision 1.11  2006/04/11 22:08:12  tino
- * new release
- *
  * Revision 1.10  2004/11/12 04:45:00  tino
  * NULL pointer dereference corrected and minor logging improvements
- *
- * Revision 1.9  2004/10/22 01:14:12  tino
- * new release
  *
  * Revision 1.8  2004/05/23 12:25:58  tino
  * Thou shalt not forget to test compile before checkin ;)
  *
  * Revision 1.7  2004/05/23 12:22:21  tino
  * closedown problem in ptybuffer elliminated
- *
- * Revision 1.6  2004/05/23 10:12:23  tino
- * new upload for NWNadm
  *
  * Revision 1.5  2004/05/21 02:23:35  tino
  * minor issue fixed: free() of "work" pointer which is a stack variable
@@ -79,9 +64,6 @@
  *
  * Revision 1.2  2004/05/20 02:05:43  tino
  * History now has a define and is 1000 lines, not 10 like for testing
- *
- * Revision 1.1  2004/05/19 20:22:30  tino
- * first commit
  */
 #ifndef PTYBUFFER_HISTORY_LENGTH
 #define PTYBUFFER_HISTORY_LENGTH	1000
@@ -277,7 +259,7 @@ struct ptybuffer
     int			forcepoll;
     TINO_GLIST		send;
     TINO_GLIST		screen;
-    long long		count;
+    long long		blockcount, skipbytes, bytecount;
     int			outlen, outpos;
     const char		*out;
     long		history_length;
@@ -291,7 +273,7 @@ struct ptybuffer_connect
     char		in[BUFSIZ];
     int			outfill, outpos;
     char		out[BUFSIZ+BUFSIZ];
-    long long		screenpos;
+    long long		screenpos, screenbytes;
   };
 
 /* Handle data to a connected socket:
@@ -304,11 +286,11 @@ struct ptybuffer_connect
 static int
 connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
-  struct ptybuffer_connect	*c	= tino_sock_user(sock);
+  struct ptybuffer_connect	*c	= tino_sock_userO(sock);
   char				*pos;
   int				got, put, cnt;
 
-  xDP(("connect_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
+  xDP(("connect_process(%p[%d], %d)", sock, tino_sock_fdO(sock), type));
   switch (type)
     {
     case TINO_SOCK_PROC_EOF:
@@ -320,7 +302,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       xDP(("connect_process() close"));
       file_log("close %d: %d sockets",
-	       tino_sock_fd(sock), tino_sock_use());
+	       tino_sock_fdO(sock), tino_sock_useO());
       /* propagate close of stdin main socket
        * in case we use sockfile=-
        */
@@ -333,7 +315,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       /* If something is waiting to be written
        * mark this side as readwrite, else only read.
        */
-      return (c->outpos<c->outfill || c->screenpos<c->p->count
+      return (c->outpos<c->outfill || c->screenpos<c->p->blockcount
 	      ? TINO_SOCK_READWRITE
 	      : TINO_SOCK_READ);
 
@@ -349,7 +331,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  c->discard	= 1;	/* line too long	*/
 	  c->infill	= 0;
 	}
-      got	= read(tino_sock_fd(sock),
+      got	= read(tino_sock_fdO(sock),
 		       c->in+c->infill, sizeof c->in-c->infill);
       xDP(("connect_process() read %d", got));
       if (got<=0)
@@ -372,14 +354,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	    {
 	      xDP(("connect_process() add %.*s", (int)cnt, c->in));
 	      tino_glist_add_n(c->p->send, c->in, cnt);
-	      tino_sock_poll(c->p->pty);
+	      tino_sock_pollOn(c->p->pty);
 #if 0
 	      /* This is too dangerous.  If passwords are entered with
 	       * 'stty noecho', then they shall not be recorded.
 	       * (Well, we can perhaps auto-switch logging later.)
 	       */
 	      file_log("input %d: %.*s",
-		       tino_sock_fd(sock), (int)cnt-1, c->in);
+		       tino_sock_fdO(sock), (int)cnt-1, c->in);
 #endif
 	    }
 	  c->discard	= 0;
@@ -401,13 +383,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 
 	  c->outpos	= 0;
 	  c->outfill	= 0;
-	  min		= c->p->count-c->p->screen->count;
+	  min		= c->p->blockcount-c->p->screen->count;
 	  if (min>c->screenpos)
 	    {
 	      c->outfill	= snprintf(c->out, sizeof c->out,
-					   "\n[[%Ld infoblocks skipped]]\n",
-					   min-c->screenpos);
+					   "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
+					   c->p->skipbytes-c->screenbytes, min-c->screenpos);
 	      c->screenpos	= min;
+	      c->screenbytes	= c->p->skipbytes;
 	    }
 	  /* Find the proper infoblock
 	   *
@@ -437,7 +420,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	  return 1;
 	}
       xDP(("connect_process() write(%d)", (int)(c->outfill-c->outpos)));
-      put	= write(tino_sock_fd(sock),
+      put	= write(tino_sock_fdO(sock),
 			c->out+c->outpos, c->outfill-c->outpos);
       xDP(("connect_process() write %d", put));
       if (put>0)
@@ -456,15 +439,18 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
 static int
 master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
-  struct ptybuffer	*p=tino_sock_user(sock);
+  struct ptybuffer	*p=tino_sock_userO(sock);
   char			buf[BUFSIZ];
   int			got, put;
 
-  xDP(("master_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
+  xDP(("master_process(%p[%d], %d)", sock, tino_sock_fdO(sock), type));
   /* Do a cleanup step each time we come here.
    */
   if (p->screen->count>p->history_length)
-    tino_glist_free(tino_glist_get(p->screen));
+    {
+      p->skipbytes	+= p->screen->list->len;
+      tino_glist_free(tino_glist_get(p->screen));
+    }
   switch (type)
     {
     case TINO_SOCK_PROC_CLOSE:
@@ -502,7 +488,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        * Cleanup of lines is done above.
        */
       xDP(("master_process() read"));
-      got	= read(tino_sock_fd(sock), buf, sizeof buf);
+      got	= read(tino_sock_fdO(sock), buf, sizeof buf);
       xDP(("master_process() read %d", got));
       if (got<0)
 	return -1;
@@ -510,7 +496,8 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	{
 	  file_out(buf, (size_t)got);
 	  tino_glist_add_n(p->screen, buf, (size_t)got);
-	  p->count++;
+	  p->bytecount	+= got;
+	  p->blockcount++;
 	  p->forcepoll	= 1;
 	}
       return got;
@@ -543,7 +530,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	}
       /* Write something to the terminal
        */
-      put	= write(tino_sock_fd(sock),
+      put	= write(tino_sock_fdO(sock),
 			p->out+p->outpos, p->outlen-p->outpos);
       xDP(("master_process() write %d", put));
       if (put>0)
@@ -557,7 +544,8 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
 	      memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
 	      memcpy(ent->data+8+put, "]\n", (size_t)2);
 	      file_out(ent->data, 10+put);
-	      p->count++;
+	      p->bytecount	= 10+put;
+	      p->blockcount++;
 	      p->forcepoll	= 1;
 	    }
 	  /* Remember which data was written.
@@ -582,11 +570,11 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
 
   buf		= tino_alloc0(sizeof *buf);
   buf->p	= p;
-  if (p->history_tail>=0 && p->history_tail>p->count)
-    buf->screenpos	= p->count-p->history_tail;
-  sock		= tino_sock_new_fd(fd, connect_process, buf);
+  if (p->history_tail>=0 && p->history_tail>p->blockcount)
+    buf->screenpos	= p->blockcount-p->history_tail;
+  sock		= tino_sock_new_fdAn(fd, connect_process, buf);
 
-  file_log("connect %d: %d sockets", fd, tino_sock_use());
+  file_log("connect %d: %d sockets", fd, tino_sock_useO());
   return sock;
 }
 
@@ -598,10 +586,10 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
 static int
 sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
 {
-  struct ptybuffer		*p=tino_sock_user(sock);
+  struct ptybuffer		*p=tino_sock_userO(sock);
   int				fd;
 
-  xDP(("sock_process(%p[%d], %d)", sock, tino_sock_fd(sock), type));
+  xDP(("sock_process(%p[%d], %d)", sock, tino_sock_fdO(sock), type));
   switch (type)
     {
     default:
@@ -623,11 +611,14 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
     case TINO_SOCK_PROC_WRITE:
     case TINO_SOCK_PROC_ACCEPT:
       xDP(("sock_process() accept"));
-      fd	= accept(tino_sock_fd(sock), NULL, NULL);
+      fd	= accept(tino_sock_fdO(sock), NULL, NULL);
       xDP(("sock_process() accept %d", fd));
       if (fd<0)
-	return -1;
-      tino_sock_poll(ptybuffer_new_fd(p, fd));
+	{
+	  file_log("accept: returned error %s", strerror(errno));
+	  return 0;
+	}
+      tino_sock_pollOn(ptybuffer_new_fd(p, fd));
       break;
     }
   xDP(("sock_process() end"));
@@ -656,8 +647,8 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
     work.sock		= ptybuffer_new_fd(&work, params->first_connect);
 
   if (sock)
-    work.sock		= tino_sock_new_fd(sock, sock_process, &work);
-  work.pty		= tino_sock_new_fd(master, master_process, &work);
+    work.sock		= tino_sock_new_fdAn(sock, sock_process, &work);
+  work.pty		= tino_sock_new_fdAn(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
   work.forcepoll	= 1;
@@ -683,7 +674,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 
       tmp		= work.forcepoll;
       work.forcepoll	= 0;
-      if (tino_sock_select(tmp)<0)
+      if (tino_sock_selectEn(tmp)<0)
 	tino_exit("select");
     }
 }
