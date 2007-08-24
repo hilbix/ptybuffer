@@ -4,7 +4,12 @@
 # Ptybuffer web based shell - output window
 #
 # $Log$
-# Revision 1.1  2007-08-24 17:32:21  tino
+# Revision 1.2  2007-08-24 19:22:16  tino
+# I tried the script to go away on user abort,
+# but for some reason on RH9 with PHP4.2.2 and apache1.3
+# this does not work.
+#
+# Revision 1.1  2007/08/24 17:32:21  tino
 # first version
 #
 ?>
@@ -34,16 +39,28 @@ if (!preg_match("/^[-.a-zA-Z0-9]*$/",$port)) $port="";
 
 echo strftime("%Y-%m-%d %H:%M:%S");
 
+function killme()
+{
+  GLOBAL $fd;
+
+  fclose($fd);
+  exit(0);
+}
+
 echo "- LOG START $port<BR>";
 $line	= 0;
 if (!($fd=fsockopen("sock/$port", 0)))
   echo "cannot connect to sock $port";
 else
   {
+    register_shutdown_function(killme);
     $needline	= true;
     $buf	= "";
-    for (;;)
+    # For some reason on my RH9 this script does not terminate on user abort
+    while (!connection_aborted())
       {
+        ignore_user_abort(FALSE);
+
 	if ($buf=="")
 	  {
 	    # FIX for PHP4.2.2: fread not returns if blocking
@@ -54,7 +71,7 @@ else
           {
 	    if (feof($fd))
 	      break;
-	    ob_flush();
+	    ob_end_flush();
             flush();
 	    socket_set_blocking($fd,1);
 	    $buf	= fread($fd,1);
@@ -78,6 +95,7 @@ else
         if ($needline!==false)
 	  echo "<BR></DIV>\n";
       }
+    fclose($fd);
     echo "<BR></DIV>";
   }
 ?>
