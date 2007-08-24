@@ -1,0 +1,13 @@
+# $Header$
+#
+# Do not allow anybody access to files in this directory
+#
+# $Log$
+# Revision 1.1  2007-08-24 17:32:21  tino
+# first version
+#
+
+Order allow,deny
+Deny from all
+
+Satisfy all

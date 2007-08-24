@@ -1,0 +1,16 @@
+# $Header$
+#
+# Only allow access to this directory to yourself
+#
+# $Log$
+# Revision 1.1  2007-08-24 17:32:21  tino
+# first version
+#
+
+Order deny,allow
+Allow from 127.0.0.1
+Deny from all
+
+# Add your permissions here
+#Satisfy any
+Allow from 192.168.71.0/24
