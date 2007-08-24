@@ -5,7 +5,10 @@
 # Stress test
 #
 # $Log$
-# Revision 1.8  2007-06-01 11:54:24  tino
+# Revision 1.9  2007-08-24 10:56:44  tino
+# filenames changed and option -po added
+#
+# Revision 1.8  2007/06/01 11:54:24  tino
 # Now output works as expected
 #
 # Revision 1.7  2007/06/01 11:19:22  tino
@@ -30,17 +33,17 @@
 # Test script added to find weird bug
 
 cd "`dirname "$0"`" || exit 1
-rm -f sock.tmp
+rm -f stress.sock stress.out
 export MALLOC_CHECK_=1
-../ptybuffer -l- -d sock.tmp ./test.sh &
+../ptybuffer -l- -d -po stress.out stress.sock ./test.sh &
 KPID=$!
 unset MALLOC_CHECK_
 sleep 1
 i=0
 
-trap 'kill $KPID; rm sock.tmp; echo $i; exit' 0
-while	accept ">sock.tmp" >/dev/null 2>&1 <&1 ||
-	accept ">sock.tmp" >/dev/null 2>&1 <&1
+trap 'kill $KPID; rm stress.sock stress.out; echo $i; exit' 0
+while	accept ">stress.sock" >/dev/null 2>&1 <&1 ||
+	accept ">stress.sock" >/dev/null 2>&1 <&1
 
 do
 	let i=i+1
