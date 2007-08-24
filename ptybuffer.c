@@ -19,7 +19,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.23  2007-06-01 11:54:49  tino
+ * Revision 1.24  2007-08-24 19:25:02  tino
+ * Option -q and -p and some new lib function names
+ *
+ * Revision 1.23  2007/06/01 11:54:49  tino
  * Next dist quickly
  *
  * Revision 1.22  2007/06/01 10:52:48  tino
@@ -96,7 +99,7 @@
 #include "ptybuffer_version.h"
 
 static const char	*outfile, *logfile;
-static int		doecho, dotimestamp;
+static int		doecho, dotimestamp, doquiet;
 static pid_t		mypid;
 
 static FILE *
@@ -105,7 +108,7 @@ file_open(FILE *fd, const char *name)
   if (!name)
     return 0;
   if (strcmp(name, "-"))
-    fd	= fopen(name, "a+");
+    fd	= tino_file_fopen(name, "a+");
   return fd;
 }
 
@@ -115,7 +118,7 @@ file_flush_close(FILE *fd)
   if (fd==stdout || fd==stderr)
     fflush(fd);
   else
-    fclose(fd);
+    tino_file_fclose(fd);
 }
 
 static void
@@ -127,16 +130,15 @@ file_timestamp(FILE *fd, int showpid)
   time(&tim);
   gmtime_r(&tim, &tm);
   fprintf(fd,
-	  "%4d-%02d-%02d %02d:%02d:%02d",
+	  "%4d-%02d-%02d %02d:%02d:%02d ",
 	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
 	  tm.tm_hour, tm.tm_min, tm.tm_sec);
   if (showpid)
     {
       if (!mypid)
 	mypid	= getpid();
-      fprintf(fd, " %ld", (long)mypid);
+      fprintf(fd, "%ld: ", (long)mypid);
     }
-  fprintf(fd, ": ");
 }
 
 /* Do you have a better idea?
@@ -154,7 +156,7 @@ file_out(void *_ptr, size_t len)
   if ((fd=file_open(stdout, outfile))==0)
     return;
   if (!dotimestamp)
-    fwrite(ptr, len, 1, fd);
+    tino_file_fwrite(fd, ptr, len);
   else
     while (len)
       {
@@ -170,7 +172,7 @@ file_out(void *_ptr, size_t len)
 	      i++;
 	      break;
 	    }
-	fwrite(ptr, i, 1, fd);
+	tino_file_fwrite(fd, ptr, i);
 	ptr	+= i;
 	len	-= i;
       }
@@ -187,7 +189,7 @@ file_log(const char *s, ...)
   int		e;
 
   e	= errno;
-  if ((fd=file_open(stderr, logfile))==0)
+  if ((fd=file_open(stderr, ((logfile || doquiet) ? logfile : "-")))==0)
     {
       errno	= e;
       return;
@@ -692,7 +694,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 static jmp_buf do_check_jmp;
 
 static void
-do_check_hook(const char *err, TINO_VA_LIST list)
+do_check_hook(TINO_VA_LIST list)
 {
   longjmp(do_check_jmp, 1);
 }
@@ -810,6 +812,18 @@ main(int argc, char **argv)
 		      PTYBUFFER_HISTORY_LENGTH,
 		      1,
 
+		      TINO_GETOPT_STRING
+		      "o file	write terminal output to file (- to stdout)"
+		      , &outfile,
+
+		      TINO_GETOPT_FLAG
+		      "p	prefix output with timestamp"
+		      ,	&dotimestamp,
+
+		      TINO_GETOPT_FLAG
+		      "q	quiet operation (suppress start banners if no -l)"
+		      , &doquiet,
+
 		      TINO_GETOPT_FLAG
 		      "s	use stdin as first connected socket.\n"
 		      "		This is similar to sockfile=- but ptybuffer continues on EOF"
@@ -825,10 +839,6 @@ main(int argc, char **argv)
 		      , &params.history_tail,
 		      -1,
 		      -1,
-
-		      TINO_GETOPT_STRING
-		      "o file	write terminal output to file (- to stdout)"
-		      , &outfile,
 
 		      NULL
 		      );
@@ -874,6 +884,7 @@ main(int argc, char **argv)
        */
       if ((pid=fork())!=0)
 	return parent(pid, fds);
+
       mypid	= 0;
 
       /* child:
@@ -984,6 +995,8 @@ main(int argc, char **argv)
        */
       write(fds[1], "OK", 2);
       close(fds[1]);
+
+      doquiet	= 1;	/* suppress further default child output	*/
     }
 
   daemonloop(sock, master, &params);
