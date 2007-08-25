@@ -1,3 +1,22 @@
+2007-08-25    <tino@firebird.03.softkill.net>
+
+	* Makefile.tino (DISTCLEAN): cleans for php/ test socket
+
+2007-08-24    <tino@firebird.03.softkill.net>
+
+	* php/.htaccess, php/sock/.htaccess: added
+
+	* php/index.html, php/inp.php, php/out.php, php/startshell.sh:
+	added
+
+	* test/stress.sh: Option -p and -o added for tests and names of
+	intermediate files changed
+
+	* ptybuffer.c (main): timstamp option added (actually it was
+	already there, but the option was missing)
+	(file_timestamp): logging changed, on option -o only prefix with
+	date and time, not a ':'
+
 2007-06-01    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (main): outfile - and logfile - now do work again.

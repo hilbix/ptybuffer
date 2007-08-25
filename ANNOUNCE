@@ -1,25 +1,13 @@
-Bufix and minor improvement release.
+Ptybufferconnect a little bit more usable, new options plus minor
+update release.  Added the php/ subdirectory for web based shell demo.
 
-DO NOT USE VERSION 0.5.9!  Use 0.5.8 or 0.5.10 instead.
+The tool ptybufferconnect now starts to do something reasonable.  It
+is far from beeing read yet, though.  Interactive mode is still
+missing.
 
-I moved SIGPIPE out of main and just ignored it in the part which goes
-away for daemonizing.  Apparently SIGPIPE must be ignored in the
-resident part, too, as it sometimes shows up.  Dunno why.  Also dunno
-why the program just goes away (SIG_DFL?).  Now SIGPIPE shall no more
-make trouble.
+This version uses the latest internal changes in my library, so it is
+- again - somewhat experimental.  Use 0.5.10 if you have trouble, this
+version is considered stable.
 
-A second bug was, when it came to logging.  The argument '-' (log/out
-to stderr/out) was no more correctly processed for logfiles.  Also
-another change now is, that logging by default is turned off
-completely, so you must enable it and use '-' if you want the old
-(intermediate, I think it wasn't there from the beginning) behavior.
-
-The minor improvement is, that ptybuffer now hands out the number of
-skipped bytes at the beginning, to ease script development to
-re-attach to ptybuffer.  Still not perfect though, there shall be some
-better way to negotiate content positions.
-
-Also some minor changes to reflect the new library routine names.
-
-This version is released even more early to fix the bug, so it's
-nearly untested.
+Option -p was added for timestamping in the output logfile (-o).  Also
+option -q was added so that ptybuffer now by default prints some info.

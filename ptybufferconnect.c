@@ -1,33 +1,40 @@
 /* $Header$
  *
  * ptybuffer: connect to ptybuffer from shell
- * Copyright (C)2006 Valentin Hilbig, webmaster@scylla-charybdis.com
+ * Copyright (C)2006-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.1  2006-07-26 12:20:22  tino
- * options -c, -f and release
+ * Revision 1.2  2007-08-25 10:31:55  tino
+ * intermediate dist
  *
  */
 
+#if 0
+#define	TINO_DP_sock	TINO_DP_ON
+#endif
+
 #include "tino/file.h"
-#include "tino/sock.h"
+#include "tino/sockbuf.h"
+#include "tino/getopt.h"
 
-static int	sock;
+#include "ptybuffer_version.h"
 
+#if 0
 static void
 put(const char *buf, int n, int noesc)
 {
@@ -42,25 +49,101 @@ put(const char *buf, int n, int noesc)
 	putchar(c);
     }
 }
+#endif
+
+/* I consider it bad that such a wrapper is needed
+ */
+static void
+out_fn(TINO_SOCKBUF sb, int len)
+{
+  tino_buf_write_away(tino_sockbuf_inO(sb), 0, -1);
+}
+
+static void
+term_fn(TINO_SOCKBUF sb, int len)
+{
+  if (!tino_buf_get_len(tino_sockbuf_outO(sb)))
+    tino_sock_shutdownE(tino_sockbuf_fdO(sb), SHUT_WR);
+}
 
 int
 main(int argc, char **argv)
 {
-  char	buf[BUFSIZ];
-  int	n;
+  TINO_SOCKBUF	sb;
+  int		argn, ignore, term, interactive;
+  char		*send;
 
-  printf("not ready yet!\n");
-  if (argc!=2)
+  argn	= tino_getopt(argc, argv, 1, 1,
+		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
+		      " socket\n"
+		      "	Connect to ptybuffer socket"
+		      ,
+
+		      TINO_GETOPT_FLAG
+		      TINO_GETOPT_MAX
+		      "b	batch mode (read data from stdin)"
+		      , &interactive,
+		      1,
+#if 0
+		      TINO_GETOPT_FLAG
+		      TINO_GETOPT_MAX
+		      "c	control characters are printed as escapes"
+		      "		Give twice to supress output of raw characters, too"
+		      , &control_chars,
+		      2,
+#endif
+		      TINO_GETOPT_FLAG
+		      "e	exit if data is transferred (see -p)"
+		      , &term,
+
+		      TINO_GETOPT_USAGE
+		      "h	This help"
+		      ,
+
+		      TINO_GETOPT_FLAG
+		      TINO_GETOPT_MAX
+		      "n	noninteractive, ignore stdin\n"
+		      "		default if stdin is not a tty"
+		      , &interactive,
+		      -1,
+
+		      TINO_GETOPT_STRING
+		      "p str	prepend string to output to socket"
+		      , &send,
+
+		      TINO_GETOPT_FLAG
+		      "q	quiesce output (data read from socket not printed)"
+		      , &ignore,
+
+#if 0
+		      TINO_GETOPT_FLAG
+		      TINO_GETOPT_FLAG
+		      "u	unescape input (backslash escaped as in C)"
+		      "		give twice to unescape -p and stdin"
+		      , &unescape,
+		      2,
+#endif
+
+		      NULL
+		      );
+
+  if (argn<=0)
+    return 1;
+
+  if (!interactive)
+    interactive	= isatty(0) ? 1 : -1;
+
+  sb	= tino_sockbuf_newO(tino_sock_unix_connect(argv[argn]), argv[argn], NULL);
+  if (send)
+    tino_buf_add_s(tino_sockbuf_outO(sb), send);
+  if (!ignore)
+    TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_READ_HOOK, out_fn);
+  if (term)
+    TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_WRITE_HOOK, term_fn);
+  if (interactive>0)
     {
-      fprintf(stderr,
-	      "Usage: %s socket\n"
-	      "\tConnect to ptybuffer transparently"
-	      , argv[0]);
-      return 1;
+      fprintf(stderr, "interactive mode not yet implemented, use -n\n");
+      return -1;
     }
-  sock	= tino_sock_unix_connect(argv[1]);
-  while ((n=read(sock, buf, sizeof buf))>0)
-    put(buf, n, 1);
-  000;
-  return 0;
+  return tino_sock_select_loopA();
 }

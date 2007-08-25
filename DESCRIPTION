@@ -2,7 +2,10 @@ daemonize interactive tty line driven programs with output history
 # $Header$
 #
 # $Log$
-# Revision 1.2  2007-03-04 02:49:18  tino
+# Revision 1.3  2007-08-25 10:31:55  tino
+# intermediate dist
+#
+# Revision 1.2  2007/03/04 02:49:18  tino
 # Commit for dist, see ChanegLog
 #
 # Revision 1.1  2004/11/12 04:45:00  tino
@@ -20,13 +23,14 @@ NWNadm has been removed and will show up as an idependent package.
 Example how to fork off a web based emergency shell with ptybuffer
 <b>(this is a extreme security risk if you don't protect it!)</b>:
 <pre>
-copy the nwn part (see 0.2.x) into ~/public_html/shell/
-ptybuffer ~/public_html/shell/server/shell /bin/bash
-point your browser to
-http://your.server.name/~yourlogin/shell/all.php?port=shell
+mkdir -p $HOME/public_html/shell/
+cp -rp php/. $HOME/public_html/shell/
+$HOME/public_html/startshell.sh
+Start your browser with http://127.0.0.1/~$USER/shell/
 </pre>
 If you don't understand this, don't even try it.  It's too dangerous!
 </TD></TR></TABLE>
 
-Note: To connect to the ptybuffer socket you need a tool
-like <a href="http://freshmeat.net/projects/socat/">socat</a>.
+Note: You can use ptybufferconnect to connect to the ptybuffer socket,
+but you can also use a tool like
+<a href="http://freshmeat.net/projects/socat/">socat</a>.
