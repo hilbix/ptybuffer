@@ -19,7 +19,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.26  2007-08-29 21:54:21  tino
+ * Revision 1.27  2007-08-29 22:23:48  tino
+ * 0.6.1 usage fixed
+ *
+ * Revision 1.26  2007/08/29 21:54:21  tino
  * dist 0.6.0, see ChangeLog
  *
  * Revision 1.25  2007/08/29 20:30:11  tino
@@ -791,8 +794,10 @@ main(int argc, char **argv)
 #endif
 		      " sockfile command [args...]\n"
 		      "	if sockfile=- then connection comes from stdin.\n"
-		      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the"
-		      " pty are silently discarded if option -i is not present."
+		      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the\n"
+		      "	pty are silently discarded if option -i is not present."
+		      ,
+
 		      TINO_GETOPT_USAGE
 		      "h	This help"
 		      ,
@@ -829,7 +834,7 @@ main(int argc, char **argv)
 		      "		received from clients, then it sends the line to the terminal.\n"
 		      "		If you are concerned that the pty never sees lines longer\n"
 		      "		than " PTYBUFFER_MAX_INPUTLINE_STR " then do not use this option\n"
-		      " 	and set option -k!  See also option -k"
+		      "		and set option -k!  See also option -k"
 		      , &params.immediate,
 
 		      TINO_GETOPT_FLAG

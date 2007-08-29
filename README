@@ -11,6 +11,8 @@ head test/test.sh
 Changes
 =======
 
+2007-08-30 0.6.1	Usage fixed
+2007-08-29 0.6.0	bugfix, options -i -k
 2007-08-29 0.5.12	bugfix for more than 2^31 read()s from pty
 2007-08-25 0.5.11	options -p -q. early 0.6.0 for ptybufferconnect
 2007-06-01 0.5.10	bugfix for 0.5.9
@@ -167,7 +169,10 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.7  2007-08-29 20:30:11  tino
+Revision 1.8  2007-08-29 22:23:48  tino
+0.6.1 usage fixed
+
+Revision 1.7  2007/08/29 20:30:11  tino
 Bugfix (int -> long long) and ptybufferconnect -i
 
 Revision 1.6  2006/08/11 22:09:07  tino

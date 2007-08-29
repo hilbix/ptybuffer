@@ -1,10 +1,3 @@
-64 bit bugfix, option -i and -k, ptybufferconnect now sends to stdout
+Usage corrected
 
-After some searching I found where the presentation bug hid.  Also the
-last bugfix disabled option -t (which did not work correctly before I
-think).  This version here shall fix all that now.  With option -i and
--k this can be considered a 0.6.0.  However ptybufferconnect is not
-yet as complete as I would like to see it.
-
-Also ptybufferconnect now writes data to stdout (before it was stdin,
-oops).
+Before the usage was distorted (several typos).
