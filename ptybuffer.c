@@ -19,7 +19,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.24  2007-08-24 19:25:02  tino
+ * Revision 1.25  2007-08-29 20:30:11  tino
+ * Bugfix (int -> long long) and ptybufferconnect -i
+ *
+ * Revision 1.24  2007/08/24 19:25:02  tino
  * Option -q and -p and some new lib function names
  *
  * Revision 1.23  2007/06/01 11:54:49  tino
@@ -391,10 +394,12 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       if (c->outpos>=c->outfill)
 	{
 	  TINO_GLIST_ENT	list;
-	  int			min;
+	  long long		min;
 
 	  c->outpos	= 0;
 	  c->outfill	= 0;
+	  /* always >0, only <0 on overruns
+	   */
 	  min		= c->p->blockcount-c->p->screen->count;
 	  if (min>c->screenpos)
 	    {
@@ -582,8 +587,10 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
 
   buf		= tino_alloc0(sizeof *buf);
   buf->p	= p;
+#if 0
   if (p->history_tail>=0 && p->history_tail>p->blockcount)
     buf->screenpos	= p->blockcount-p->history_tail;
+#endif
   sock		= tino_sock_new_fdAn(fd, connect_process, buf);
 
   file_log("connect %d: %d sockets", fd, tino_sock_useO());

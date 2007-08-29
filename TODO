@@ -1,6 +1,13 @@
 -*-text-*-
 $Header$
 
+BUGs:
+
+- Send incomplete line to the pty if client disconnects.  This would
+  enable to send a single ^C without followed by an LF.
+
+Wishlist:
+
 - Support for OOB command to/from client.  This way we perhaps can
   send some control commands to the master instead of the pty.
 
@@ -31,7 +38,10 @@ Possibly:
   always be delayed.
 
 $Log$
-Revision 1.3  2006-08-11 22:09:07  tino
+Revision 1.4  2007-08-29 20:30:11  tino
+Bugfix (int -> long long) and ptybufferconnect -i
+
+Revision 1.3  2006/08/11 22:09:07  tino
 Bugfix (for missing option -c)
 child status is logged (and returned for option -d)
 

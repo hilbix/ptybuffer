@@ -1,13 +1,23 @@
-Ptybufferconnect a little bit more usable, new options plus minor
-update release.  Added the php/ subdirectory for web based shell demo.
+Longstanding BUG fixed:
 
-The tool ptybufferconnect now starts to do something reasonable.  It
-is far from beeing read yet, though.  Interactive mode is still
-missing.
+When a ptybuffer runs so long that more than 2 billion read operations
+were done, output to the socket would starve and ptybuffer will eat up
+100% CPU when a socket is connected.  This is due to an 32 bit to 64
+bit signed overrun.  I am not completely sure if this really happens,
+but there is the possibility.
 
-This version uses the latest internal changes in my library, so it is
-- again - somewhat experimental.  Use 0.5.10 if you have trouble, this
-version is considered stable.
+YOU SHOULD NOT USE OLDER VERSIONS OF PTYBUFFER!  However, I do not know
+if this version here is as stable as the old ones.  So I did not renmove
+the downloads.
 
-Option -p was added for timestamping in the output logfile (-o).  Also
-option -q was added so that ptybuffer now by default prints some info.
+Note that there still might be a bug left if ptybuffer runs over 2^63
+read operations from the started program.  As this is unlikely to
+happen (at 1 billion reads per second this needs 272 years) ever, I
+better tell it here ;)
+
+Also ptybufferconnect now, by default, sends a LF, as ptybuffer
+currently ignores incomplete lines (which is a bug.  Incomplete lines
+shall be sent to the program when a socket disconnects, to be able to
+just send a CTRL-C or similar without an LF).  If you want no LF, use
+the option -i (which corresponds to the option -i of ptybuffer which
+not yet is present).

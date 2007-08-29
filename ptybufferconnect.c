@@ -19,8 +19,8 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.2  2007-08-25 10:31:55  tino
- * intermediate dist
+ * Revision 1.3  2007-08-29 20:30:12  tino
+ * Bugfix (int -> long long) and ptybufferconnect -i
  *
  */
 
@@ -71,6 +71,7 @@ main(int argc, char **argv)
 {
   TINO_SOCKBUF	sb;
   int		argn, ignore, term, interactive;
+  int		no_lf;
   char		*send;
 
   argn	= tino_getopt(argc, argv, 1, 1,
@@ -99,6 +100,11 @@ main(int argc, char **argv)
 		      TINO_GETOPT_USAGE
 		      "h	This help"
 		      ,
+
+		      TINO_GETOPT_FLAG
+		      "i	Do not append a linefeed to string given with -p\n"
+		      "		This corresponds to ptybuffer's option -i"
+		      , &no_lf,
 
 		      TINO_GETOPT_FLAG
 		      TINO_GETOPT_MAX
@@ -135,7 +141,11 @@ main(int argc, char **argv)
 
   sb	= tino_sockbuf_newO(tino_sock_unix_connect(argv[argn]), argv[argn], NULL);
   if (send)
-    tino_buf_add_s(tino_sockbuf_outO(sb), send);
+    {
+      tino_buf_add_s(tino_sockbuf_outO(sb), send);
+      if (!no_lf)
+	tino_buf_add_c(tino_sockbuf_outO(sb), '\n');
+    }
   if (!ignore)
     TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_READ_HOOK, out_fn);
   if (term)

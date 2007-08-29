@@ -1,3 +1,22 @@
+2007-08-29    <tino@firebird.03.softkill.net>
+
+	* TODO (BUGs): added
+
+	* ptybufferconnect.c (main): option -i added
+
+	* ptybuffer.c (connect_process): bugfix: min was int, not long
+	long as needed.  Long running ptybuffers (more than 2 billion IO
+	operations) thus were not able to output any data to the socket
+	and eat up 100% CPU.
+	(ptybuffer_new_fd): I am really not sure what I wanted to do with
+	this lines I now disabled.  buf->screenpos must be initialized to
+	0 to print the history buffer overrun lines correctly.  However it
+	was initizlized to a negative value by these lines if there were
+	less than history_tail lines in the buffer.  Perhaps an overrun
+	issue or forgotten buggy code before the skipped infoblocks were
+	printed?  Problem showed up on 64 bit platforms first, I am really
+	puzzled why not before.
+	
 2007-08-25    <tino@firebird.03.softkill.net>
 
 	* Makefile.tino (DISTCLEAN): cleans for php/ test socket
