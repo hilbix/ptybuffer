@@ -1,23 +1,10 @@
-Longstanding BUG fixed:
+64 bit bugfix, option -i and -k, ptybufferconnect now sends to stdout
 
-When a ptybuffer runs so long that more than 2 billion read operations
-were done, output to the socket would starve and ptybuffer will eat up
-100% CPU when a socket is connected.  This is due to an 32 bit to 64
-bit signed overrun.  I am not completely sure if this really happens,
-but there is the possibility.
+After some searching I found where the presentation bug hid.  Also the
+last bugfix disabled option -t (which did not work correctly before I
+think).  This version here shall fix all that now.  With option -i and
+-k this can be considered a 0.6.0.  However ptybufferconnect is not
+yet as complete as I would like to see it.
 
-YOU SHOULD NOT USE OLDER VERSIONS OF PTYBUFFER!  However, I do not know
-if this version here is as stable as the old ones.  So I did not renmove
-the downloads.
-
-Note that there still might be a bug left if ptybuffer runs over 2^63
-read operations from the started program.  As this is unlikely to
-happen (at 1 billion reads per second this needs 272 years) ever, I
-better tell it here ;)
-
-Also ptybufferconnect now, by default, sends a LF, as ptybuffer
-currently ignores incomplete lines (which is a bug.  Incomplete lines
-shall be sent to the program when a socket disconnects, to be able to
-just send a CTRL-C or similar without an LF).  If you want no LF, use
-the option -i (which corresponds to the option -i of ptybuffer which
-not yet is present).
+Also ptybufferconnect now writes data to stdout (before it was stdin,
+oops).

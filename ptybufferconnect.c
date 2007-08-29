@@ -19,7 +19,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.3  2007-08-29 20:30:12  tino
+ * Revision 1.4  2007-08-29 21:54:21  tino
+ * dist 0.6.0, see ChangeLog
+ *
+ * Revision 1.3  2007/08/29 20:30:12  tino
  * Bugfix (int -> long long) and ptybufferconnect -i
  *
  */
@@ -56,7 +59,7 @@ put(const char *buf, int n, int noesc)
 static void
 out_fn(TINO_SOCKBUF sb, int len)
 {
-  tino_buf_write_away(tino_sockbuf_inO(sb), 0, -1);
+  tino_buf_write_away(tino_sockbuf_inO(sb), 1, -1);
 }
 
 static void

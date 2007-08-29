@@ -1,5 +1,15 @@
 2007-08-29    <tino@firebird.03.softkill.net>
 
+	* ptybufferconnect.c (out_fn): bugfix: Send to stdout, not stdin
+
+	* ptybuffer.c (connect_process): found where the buggy lines from
+	ptybuffer_new_fd must be put.  And fixed the bug in main where the
+	wrong variable length (int instead of long) was passed to getopt
+	(thus the variable was not initialized correctly).
+	(main): option -k added and option -i implemented
+	(connect_process): option -i and -k implemented
+	(send_to_pty): added (code moved from connect_process)
+
 	* TODO (BUGs): added
 
 	* ptybufferconnect.c (main): option -i added
