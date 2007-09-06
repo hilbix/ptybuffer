@@ -1,3 +1,9 @@
+2007-09-06    <tino@firebird.03.softkill.net>
+
+	* script/autostart.sh: "start"-message now is send to STDERR too,
+	so you can redirect STDOUT to /dev/null to suppress the "ok"
+	messages to cron.
+
 2007-08-29    <tino@firebird.03.softkill.net>
 
 	* ptybufferconnect.c (out_fn): bugfix: Send to stdout, not stdin

@@ -18,7 +18,10 @@
 # Written by Valentin Hilbig <webmaster@scylla-charybdis.com>
 #
 # $Log$
-# Revision 1.4  2007-04-07 11:30:18  tino
+# Revision 1.5  2007-09-06 14:24:54  tino
+# "started"-message now to STDERR
+#
+# Revision 1.4  2007/04/07 11:30:18  tino
 # Typo + PATH envvar (for cron usage)
 #
 # Revision 1.3  2007/03/31 21:17:06  tino
@@ -61,7 +64,7 @@ do
 	ptybuffer -l "$RUNDIR/$b.log" -o "$RUNDIR/$b.out" -cf "$RUNDIR/$b.sock" "$a"
 	ret="$?"
 	case "$ret" in
-	0)	log "started $b"; [ -z "$1" ] || sleep "$1";;
+	0)	log "started $b" >&2; [ -z "$1" ] || sleep "$1";;
 	42)	log "ok $b";;
 	*)	log "OOPS $b ($ret)" >&2; ex=1;;
 	esac
