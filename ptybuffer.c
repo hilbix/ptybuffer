@@ -1,6 +1,7 @@
 /* $Header$
  *
  * ptybuffer: daemonize interactive tty line driven programs with output history
+ *
  * Copyright (C)2004-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or
@@ -19,7 +20,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.27  2007-08-29 22:23:48  tino
+ * Revision 1.28  2007-09-18 20:39:23  tino
+ * Bugfix dist
+ *
+ * Revision 1.27  2007/08/29 22:23:48  tino
  * 0.6.1 usage fixed
  *
  * Revision 1.26  2007/08/29 21:54:21  tino
@@ -117,7 +121,7 @@ file_open(FILE *fd, const char *name)
   if (!name)
     return 0;
   if (strcmp(name, "-"))
-    fd	= tino_file_fopen(name, "a+");
+    fd	= tino_file_fopenE(name, "a+");
   return fd;
 }
 
@@ -127,7 +131,7 @@ file_flush_close(FILE *fd)
   if (fd==stdout || fd==stderr)
     fflush(fd);
   else
-    tino_file_fclose(fd);
+    tino_file_fcloseE(fd);
 }
 
 static void
@@ -165,7 +169,7 @@ file_out(void *_ptr, size_t len)
   if ((fd=file_open(stdout, outfile))==0)
     return;
   if (!dotimestamp)
-    tino_file_fwrite(fd, ptr, len);
+    tino_file_fwriteE(fd, ptr, len);
   else
     while (len)
       {
@@ -181,7 +185,7 @@ file_out(void *_ptr, size_t len)
 	      i++;
 	      break;
 	    }
-	tino_file_fwrite(fd, ptr, i);
+	tino_file_fwriteE(fd, ptr, i);
 	ptr	+= i;
 	len	-= i;
       }
@@ -960,7 +964,7 @@ main(int argc, char **argv)
   sock	= 0;
   if (strcmp(argv[argn], "-"))
     {
-      if (force && !tino_file_notsocket(argv[argn]))
+      if (force && !tino_file_notsocketE(argv[argn]))
 	unlink(argv[argn]);
       sock	= tino_sock_unix_listen(argv[argn]);
     }

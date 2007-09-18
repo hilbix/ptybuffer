@@ -1,6 +1,7 @@
 /* $Header$
  *
  * ptybuffer: connect to ptybuffer from shell
+ *
  * Copyright (C)2006-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or
@@ -19,12 +20,14 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.4  2007-08-29 21:54:21  tino
+ * Revision 1.5  2007-09-18 20:39:23  tino
+ * Bugfix dist
+ *
+ * Revision 1.4  2007/08/29 21:54:21  tino
  * dist 0.6.0, see ChangeLog
  *
  * Revision 1.3  2007/08/29 20:30:12  tino
  * Bugfix (int -> long long) and ptybufferconnect -i
- *
  */
 
 #if 0
@@ -54,18 +57,34 @@ put(const char *buf, int n, int noesc)
 }
 #endif
 
-/* I consider it bad that such a wrapper is needed
+/* I consider it bad design that such wrappers are needed.  There
+ * should be some more easy way to do it directly.  Read: I am not
+ * happy with sockbuf today.
  */
+static void
+ignore_fn(TINO_SOCKBUF sb, int len)
+{
+  tino_buf_resetO(tino_sockbuf_inO(sb));
+}
+
 static void
 out_fn(TINO_SOCKBUF sb, int len)
 {
-  tino_buf_write_away(tino_sockbuf_inO(sb), 1, -1);
+  int	err;
+
+  err	= tino_buf_write_away_allE(tino_sockbuf_inO(sb), 1, -1);
+  if (err)
+    {
+      if (err>0)
+	exit(1);
+      tino_exit("error writing stdout");
+    }
 }
 
 static void
 term_fn(TINO_SOCKBUF sb, int len)
 {
-  if (!tino_buf_get_len(tino_sockbuf_outO(sb)))
+  if (!tino_buf_get_lenO(tino_sockbuf_outO(sb)))
     tino_sock_shutdownE(tino_sockbuf_fdO(sb), SHUT_WR);
 }
 
@@ -121,8 +140,11 @@ main(int argc, char **argv)
 		      , &send,
 
 		      TINO_GETOPT_FLAG
-		      "q	quiesce output (data read from socket not printed)"
+		      TINO_GETOPT_MAX
+		      "q	quiesce output (data read from socket not printed)\n"
+		      "		Give two times to only read the first packet from socket"
 		      , &ignore,
+		      2,
 
 #if 0
 		      TINO_GETOPT_FLAG
@@ -142,15 +164,15 @@ main(int argc, char **argv)
   if (!interactive)
     interactive	= isatty(0) ? 1 : -1;
 
-  sb	= tino_sockbuf_newO(tino_sock_unix_connect(argv[argn]), argv[argn], NULL);
+  sb	= tino_sockbuf_newOn(tino_sock_unix_connect(argv[argn]), argv[argn], NULL);
   if (send)
     {
-      tino_buf_add_s(tino_sockbuf_outO(sb), send);
+      tino_buf_add_sO(tino_sockbuf_outO(sb), send);
       if (!no_lf)
-	tino_buf_add_c(tino_sockbuf_outO(sb), '\n');
+	tino_buf_add_cO(tino_sockbuf_outO(sb), '\n');
     }
-  if (!ignore)
-    TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_READ_HOOK, out_fn);
+  if (ignore<2)
+    TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_READ_HOOK, ignore ? ignore_fn : out_fn);
   if (term)
     TINO_SOCKBUF_SET(sb, TINO_SOCKBUF_WRITE_HOOK, term_fn);
   if (interactive>0)

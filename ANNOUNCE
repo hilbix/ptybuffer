@@ -1,3 +1,11 @@
-Usage corrected
+Important bugfix and minor change in bin/autostart.sh for better
+logging control
 
-Before the usage was distorted (several typos).
+I found a serious bug in my sock_select function in case
+of foced poll operation.  It is unknown if ptybuffer was
+affected, however I think some unreliablilities might
+be present in former version.
+
+However there was (as always) many changes on other places
+in my lib, so I am not sure (yet) if this version is more
+stable than before.
