@@ -4,6 +4,9 @@
 #
 # Start script to spawn a web based shell
 #
+# This Works is placed under the terms of the Copyright Less License,
+# see file COPYRIGHT.CLL.  USE AT OWN RISK, ABSOLUTELY NO WARRANTY.
+#
 # To autostart the shell you can run this script from
 # cron each minute with the switch -cron.
 #
@@ -11,9 +14,11 @@
 # YOUR MACHINE MIGHT BE COMPROMIZED IF YOU RUN IT THIS WAY!
 #
 # $Log$
-# Revision 1.1  2007-08-24 17:32:33  tino
-# first version
+# Revision 1.2  2007-09-21 11:10:15  tino
+# CLL notice now in scripts
 #
+# Revision 1.1  2007/08/24 17:32:33  tino
+# first version
 
 cd "`dirname "$0"`" || exit
 

@@ -1,6 +1,9 @@
 #!/bin/sh
 # $Header$
 #
+# This Works is placed under the terms of the Copyright Less License,
+# see file COPYRIGHT.CLL.  USE AT OWN RISK, ABSOLUTELY NO WARRANTY. 
+#
 # This is an autostarter script for use with ptybuffer.
 # You can run this each minute from cron.
 #
@@ -12,13 +15,14 @@
 # where RUNDIR is /var/log/autostart, /var/tmp/autostart or /tmp/autostart
 # (depends on which directory is present and usable).
 #
-# Don't forget to rotete the outputs in this directory!
-#
-# Public Domain as long as nobody else claims a Copyright on this.
-# Written by Valentin Hilbig <webmaster@scylla-charybdis.com>
+# Don't forget to rotate the outputs in this directory
+# as they may grow very big quickly.
 #
 # $Log$
-# Revision 1.5  2007-09-06 14:24:54  tino
+# Revision 1.6  2007-09-21 11:10:15  tino
+# CLL notice now in scripts
+#
+# Revision 1.5  2007/09/06 14:24:54  tino
 # "started"-message now to STDERR
 #
 # Revision 1.4  2007/04/07 11:30:18  tino

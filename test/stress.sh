@@ -4,8 +4,14 @@
 #
 # Stress test
 #
+# This Works is placed under the terms of the Copyright Less License,
+# see file COPYRIGHT.CLL.  USE AT OWN RISK, ABSOLUTELY NO WARRANTY.
+#
 # $Log$
-# Revision 1.9  2007-08-24 10:56:44  tino
+# Revision 1.10  2007-09-21 11:10:15  tino
+# CLL notice now in scripts
+#
+# Revision 1.9  2007/08/24 10:56:44  tino
 # filenames changed and option -po added
 #
 # Revision 1.8  2007/06/01 11:54:24  tino

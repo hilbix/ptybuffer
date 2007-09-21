@@ -3,10 +3,15 @@
 #
 # Ptybuffer web based shell - input window
 #
-# $Log$
-# Revision 1.1  2007-08-24 17:32:21  tino
-# first version
+# This Works is placed under the terms of the Copyright Less License,
+# see file COPYRIGHT.CLL.  USE AT OWN RISK, ABSOLUTELY NO WARRANTY.
 #
+# $Log$
+# Revision 1.2  2007-09-21 11:10:15  tino
+# CLL notice now in scripts
+#
+# Revision 1.1  2007/08/24 17:32:21  tino
+# first version
 
 $autoscroll=$_REQUEST["autoscroll"];
 $action=$_REQUEST["action"];
