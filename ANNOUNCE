@@ -1,11 +1,7 @@
-Important bugfix and minor change in bin/autostart.sh for better
-logging control
+Minor resource leakage fixed.
+Scripts placed under the CLL.
 
-I found a serious bug in my sock_select function in case
-of foced poll operation.  It is unknown if ptybuffer was
-affected, however I think some unreliablilities might
-be present in former version.
+With option -c ptybuffer previously kept one socket fd open which was
+not needed.
 
-However there was (as always) many changes on other places
-in my lib, so I am not sure (yet) if this version is more
-stable than before.
+For more information about the CLL see http://permalink.de/tino/cll

@@ -11,6 +11,8 @@ head test/test.sh
 Changes
 =======
 
+2007-09-21 0.6.3	Scripts under CLL, fixed minor resource leakage
+2007-09-18 0.6.2	important bugfix
 2007-08-30 0.6.1	Usage fixed
 2007-08-29 0.6.0	bugfix, options -i -k
 2007-08-29 0.5.12	bugfix for more than 2^31 read()s from pty
@@ -169,7 +171,10 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.8  2007-08-29 22:23:48  tino
+Revision 1.9  2007-09-21 11:14:29  tino
+New dist
+
+Revision 1.8  2007/08/29 22:23:48  tino
 0.6.1 usage fixed
 
 Revision 1.7  2007/08/29 20:30:11  tino

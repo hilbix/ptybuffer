@@ -1,3 +1,8 @@
+2007-09-21    <tino@firebird.03.softkill.net>
+
+	* ptybuffer.c (do_check): resource leakage fixed: Option -c forgot
+	to close the socket.
+
 2007-09-18    <tino@firebird.03.softkill.net>
 
 	* ptybufferconnect.c (ignore_fn): added, should work now as expected

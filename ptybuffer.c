@@ -20,7 +20,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.28  2007-09-18 20:39:23  tino
+ * Revision 1.29  2007-09-21 11:14:29  tino
+ * New dist
+ *
+ * Revision 1.28  2007/09/18 20:39:23  tino
  * Bugfix dist
  *
  * Revision 1.27  2007/08/29 22:23:48  tino
@@ -731,14 +734,6 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
     }
 }
 
-static jmp_buf do_check_jmp;
-
-static void
-do_check_hook(TINO_VA_LIST list)
-{
-  longjmp(do_check_jmp, 1);
-}
-
 /* Exit 42 if socket appears living
  *
  * else return (which is a mess).
@@ -746,16 +741,16 @@ do_check_hook(TINO_VA_LIST list)
 static void
 do_check(const char *name)
 {
-  if (!setjmp(do_check_jmp))
+  int	fd;
+
+  tino_sock_error_fn	= tino_sock_error_fn_ignore;
+  fd	= tino_sock_unix_connect(name);
+  tino_sock_error_fn	= 0;
+  if (fd>=0)
     {
-      tino_sock_error_fn	= do_check_hook;
-      tino_sock_unix_connect(name);
-      /* always a success if we come here
-       */
       file_log("check: socket up: %s", name);
       exit(42);
     }
-  tino_sock_error_fn	= 0;
 }
 
 static int
