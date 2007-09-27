@@ -1,7 +1,3 @@
-Minor resource leakage fixed.
-Scripts placed under the CLL.
+CygWin compile fixes.
 
-With option -c ptybuffer previously kept one socket fd open which was
-not needed.
-
-For more information about the CLL see http://permalink.de/tino/cll
+It shall now compile under CygWin again.

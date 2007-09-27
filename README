@@ -11,6 +11,7 @@ head test/test.sh
 Changes
 =======
 
+2007-09-27 0.6.4	Now compiles under CygWin again
 2007-09-21 0.6.3	Scripts under CLL, fixed minor resource leakage
 2007-09-18 0.6.2	important bugfix
 2007-08-30 0.6.1	Usage fixed
@@ -171,7 +172,10 @@ http://nwn.bioware.com/
 webmaster@scylla-charybdis.com
 http://www.scylla-charybdis.com/
 $Log$
-Revision 1.9  2007-09-21 11:14:29  tino
+Revision 1.10  2007-09-27 15:39:42  tino
+CygWin fixes
+
+Revision 1.9  2007/09/21 11:14:29  tino
 New dist
 
 Revision 1.8  2007/08/29 22:23:48  tino

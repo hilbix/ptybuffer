@@ -20,7 +20,10 @@
  * 02110-1301 USA.
  *
  * $Log$
- * Revision 1.29  2007-09-21 11:14:29  tino
+ * Revision 1.30  2007-09-27 15:39:42  tino
+ * CygWin fixes
+ *
+ * Revision 1.29  2007/09/21 11:14:29  tino
  * New dist
  *
  * Revision 1.28  2007/09/18 20:39:23  tino
@@ -95,7 +98,7 @@
 #include "tino/debug.h"
 #include "tino/fatal.h"
 #include "tino/alloc.h"
-#include "tino/sock.h"
+#include "tino/sock_select.h"
 #include "tino/slist.h"
 #include "tino/getopt.h"
 #include "tino/proc.h"
