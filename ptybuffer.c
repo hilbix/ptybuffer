@@ -1,8 +1,6 @@
-/* $Header$
+/* ptybuffer: daemonize interactive tty line driven programs with output history
  *
- * ptybuffer: daemonize interactive tty line driven programs with output history
- *
- * Copyright (C)2004-2007 Valentin Hilbig <webmaster@scylla-charybdis.com>
+ * Copyright (C)2004-2013 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -18,77 +16,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301 USA.
- *
- * $Log$
- * Revision 1.30  2007-09-27 15:39:42  tino
- * CygWin fixes
- *
- * Revision 1.29  2007/09/21 11:14:29  tino
- * New dist
- *
- * Revision 1.28  2007/09/18 20:39:23  tino
- * Bugfix dist
- *
- * Revision 1.27  2007/08/29 22:23:48  tino
- * 0.6.1 usage fixed
- *
- * Revision 1.26  2007/08/29 21:54:21  tino
- * dist 0.6.0, see ChangeLog
- *
- * Revision 1.25  2007/08/29 20:30:11  tino
- * Bugfix (int -> long long) and ptybufferconnect -i
- *
- * Revision 1.24  2007/08/24 19:25:02  tino
- * Option -q and -p and some new lib function names
- *
- * Revision 1.23  2007/06/01 11:54:49  tino
- * Next dist quickly
- *
- * Revision 1.22  2007/06/01 10:52:48  tino
- * Buggy version .. test/stress.sh does not work anymore!?
- *
- * Revision 1.20  2007/04/29 21:28:26  tino
- * SIGCHLD now is delivered
- *
- * Revision 1.18  2007/03/25 23:33:29  tino
- * Now shall be able to output log/outfiles again
- *
- * Revision 1.17  2007/03/04 02:49:18  tino
- * Commit for dist, see ChanegLog
- *
- * Revision 1.16  2006/08/11 22:09:07  tino
- * Bugfix (for missing option -c)
- * child status is logged (and returned for option -d)
- *
- * Revision 1.15  2006/07/26 12:20:22  tino
- * options -c, -f and release
- *
- * Revision 1.14  2006/07/26 11:41:14  tino
- * Option -t
- *
- * Revision 1.12  2006/04/11 22:44:15  tino
- * Well, I was too fast already again.  It does not work.  Looking for error.
- *
- * Revision 1.10  2004/11/12 04:45:00  tino
- * NULL pointer dereference corrected and minor logging improvements
- *
- * Revision 1.8  2004/05/23 12:25:58  tino
- * Thou shalt not forget to test compile before checkin ;)
- *
- * Revision 1.7  2004/05/23 12:22:21  tino
- * closedown problem in ptybuffer elliminated
- *
- * Revision 1.5  2004/05/21 02:23:35  tino
- * minor issue fixed: free() of "work" pointer which is a stack variable
- *
- * Revision 1.4  2004/05/20 04:59:00  tino
- * master can be 0, which closes stdin.  close in the slave part removed.
- *
- * Revision 1.3  2004/05/20 04:22:22  tino
- * Forgot to add the initial poll to the new socket
- *
- * Revision 1.2  2004/05/20 02:05:43  tino
- * History now has a define and is 1000 lines, not 10 like for testing
  */
 #ifndef PTYBUFFER_HISTORY_LENGTH
 #define PTYBUFFER_HISTORY_LENGTH	1000
@@ -242,7 +169,7 @@ parent(pid_t pid, int *fds)
 
   /* close the writing pipe
    */
-  close(fds[1]);
+  tino_file_close_ignO(fds[1]);
 
   file_log("parent: waiting for OK from main %ld", (long)pid);
 
@@ -255,7 +182,7 @@ parent(pid_t pid, int *fds)
 	got	= 0;
 	break;
       }
-  close(fds[0]);
+  tino_file_close_ignO(fds[0]);
 
   /* child sends OK in case everything is ok
    */
@@ -624,7 +551,7 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
   struct ptybuffer_connect	*buf;
   TINO_SOCK			sock;
 
-  buf		= tino_alloc0(sizeof *buf);
+  buf		= tino_alloc0O(sizeof *buf);
   buf->p	= p;
   if (p->history_tail>=0 && p->blockcount>p->history_tail)
     buf->minscreenpos	= p->blockcount-p->history_tail;
@@ -898,13 +825,13 @@ main(int argc, char **argv)
   if (logfile)
     {
       if (strcmp(logfile, "-"))
-	logfile	= tino_file_realpath(logfile);
+	logfile	= tino_file_realpathE(logfile);
       file_log("status log: %s", logfile);
     }
   if (outfile)
     {
       if (strcmp(outfile, "-"))
-	outfile	= tino_file_realpath(outfile);
+	outfile	= tino_file_realpathE(outfile);
       file_log("output log: %s", outfile);
     }
 
@@ -940,7 +867,7 @@ main(int argc, char **argv)
        * Close the reading pipe
        * Start a new process session
        */
-      close(fds[0]);
+      tino_file_close_ignO(fds[0]);
       setsid();
 
       /* XXX TODO Bug?
@@ -989,7 +916,7 @@ main(int argc, char **argv)
        * and all other not needed file descriptors.
        * Then exec the wanted program
        */
-      close(sock);
+      tino_file_close_ignO(sock);
       if (!foreground)
 	{
 	  close(fd);
@@ -997,13 +924,13 @@ main(int argc, char **argv)
 	}
       if (logfile && !strcmp(logfile, "-"))
 	dup2(stderr_saved, 2);
-      close(stderr_saved);
+      tino_file_close_ignO(stderr_saved);
 
       /* Put the current PID into the environment.
        *
        * I don't even trust my eyes, but 120 shall be long enough ever.
        */
-      env	= tino_alloc(120);
+      env	= tino_allocO(120);
       snprintf(env, 120, "PTYBUFFER_PID=%ld", (long)getppid());
       env[119]	= 0;
       putenv(env);
@@ -1018,7 +945,7 @@ main(int argc, char **argv)
     }
   if (pid==(pid_t)-1)
     tino_exit("forkpty");
-  close(stderr_saved);
+  tino_file_close_ignO(stderr_saved);
   file_log("main: forked child %ld", (long)pid);
 
   if (!foreground)
@@ -1035,15 +962,15 @@ main(int argc, char **argv)
 	dup2(fd, 1);
       if (!logfile || strcmp(logfile, "-"))
 	dup2(fd, 2);
-      close(fd);
+      tino_file_close_ignO(fd);
 
       setsid();
-      chdir("/");
+      tino_file_chdirE("/");
 
       /* Tell OK to the caller
        */
-      write(fds[1], "OK", 2);
-      close(fds[1]);
+      tino_file_writeE(fds[1], "OK", 2);
+      tino_file_close_ignO(fds[1]);
 
       doquiet	= 1;	/* suppress further default child output	*/
     }
