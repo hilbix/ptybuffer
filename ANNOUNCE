@@ -1,3 +1,2 @@
-CygWin compile fixes.
-
-It shall now compile under CygWin again.
+Announcements are now in the git commit log:
+git log --follow VERSION

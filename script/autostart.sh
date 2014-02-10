@@ -1,41 +1,30 @@
 #!/bin/sh
-# $Header$
+#
+# This is an autostarter script for use with ptybuffer.
+# Run this from cron like:
+# * * * * * bin/autostart.sh >/dev/null
+#
+# Place all scripts to automatically start in following directory:
+#	mkdir "$HOME/autostart/"
+# Don't forget to give them exec rights.
+#
+# You can add softlinks to other directories containing
+# scripts to autostart as well into this directory.
+#
+# To connect to STDIN of the forked scripts, do:
+#	socat - unix:/var/tmp/autostart/$USER/$SCRIPT.sock
+# $USER is your username, $SCRIPT the scriptname without .sh ext
+#
+# If you are not happy with /var/tmp/autostart then
+#	sudo mkdir -m1777 /var/log/autostart
+#
+# Don't forget to rotate the files as they will grow.
+#
+# Note that according to FSSTD /var/tmp/ survives reboot while
+# /tmp/ should not.  /var/tmp/autostart can be a softlink.
 #
 # This Works is placed under the terms of the Copyright Less License,
 # see file COPYRIGHT.CLL.  USE AT OWN RISK, ABSOLUTELY NO WARRANTY. 
-#
-# This is an autostarter script for use with ptybuffer.
-# You can run this each minute from cron.
-#
-# Create a directory $HOME/autostart/ and place all scripts
-# which shall be autostarted by CRON in this directory.
-# Don't forget to give them exec rights.
-#
-# The scripts then will be connectable to RUNDIR/$USER/$SCRIPT.sock
-# where RUNDIR is /var/log/autostart, /var/tmp/autostart or /tmp/autostart
-# (depends on which directory is present and usable).
-#
-# Don't forget to rotate the outputs in this directory
-# as they may grow very big quickly.
-#
-# $Log$
-# Revision 1.6  2007-09-21 11:10:15  tino
-# CLL notice now in scripts
-#
-# Revision 1.5  2007/09/06 14:24:54  tino
-# "started"-message now to STDERR
-#
-# Revision 1.4  2007/04/07 11:30:18  tino
-# Typo + PATH envvar (for cron usage)
-#
-# Revision 1.3  2007/03/31 21:17:06  tino
-# Forgot to change "echo" into "log" calls
-#
-# Revision 1.2  2007/03/25 23:33:02  tino
-# Fixed + better logging
-#
-# Revision 1.1  2007/03/04 02:49:18  tino
-# Commit for dist, see ChanegLog
 
 cd || exit
 
@@ -57,7 +46,7 @@ echo "$lnow"
 }
 
 ex=0
-for a in autostart/*
+for a in autostart/* autostart/*/*
 do
 	case "$a" in
 	*~)	continue;;
