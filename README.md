@@ -8,6 +8,8 @@ For the impatient
 
 ```bash
 git clone https://github.com/hilbix/ptybuffer.git
+cd ptybuffer
+git submodule update --init
 make
 sudo make install
 ```
@@ -17,9 +19,11 @@ mkdir -p ~/bin ~/autostart ~/autorun
 cp scripts/autostart.sh ~/bin/
 cp scripts/helloworld.sh ~/autostart/
 cp autorun/helloworld.sh ~/autorun/
-~/bin/autostart.sh
-socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
 { crontab -l; echo '* * * * * bin/autostart.sh >/dev/null'; } | crontab -
+~/bin/autostart.sh
+
+socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
+socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
 ```
 
 Infos:
@@ -28,6 +32,13 @@ Infos:
 head test/test.sh
 ```
 
+See also:
+
+- https://github.com/hilbix/watcher/ is designed to display running
+  autostarts: `watcher.py /var/tmp/autostart/$LOGNAME/*.sock` and
+  in future it perhaps even can control them.
+
+
 About
 -----
 
@@ -35,8 +46,8 @@ ptybuffer
 
 - daemonizes.  With option -d it runs in foreground
 
-- calls a process (arg2 and above) with a pty such that stdlib
-  usually makes output line buffered.
+- calls a process (arg2 and above) with a `PTY`.  Stdlib usually
+  makes output line buffered this way.
 
 - gathers the output history of the pty for later view.  Currently
   this is 1000 reads (not neccessarily lines, see option -n).
@@ -47,7 +58,7 @@ ptybuffer
   continuously sends all new output to the connected unix socket.
 
 - reads (full) lines from the connected unix sockets and send them to
-  the pty (line can be max. 4095 bytes long).
+  the `PTY` (line can be max. 4095 bytes long).
 
 - allows multiple concurrent connects to the unix socket.  This way
   several persons in parallel can control one process.
@@ -60,7 +71,7 @@ This is better than running background tasks using screen or tmux:
   discards data to the frozen connect and if the connect catches up
   it tells it the fact.
 
-- Concurrent access is no problem.  Lines are always send as full lines.
+- Concurrent access is no problem.  Lines are always sent as full lines.
 
 - History of output is clearly defined, not just something like a
   window.
@@ -88,11 +99,6 @@ Bugs:
 
 - ptybuffer does not unlink() the socket if option -f and -c are
   missing.  This is a feature.
-
-- The program running under pty control is not considered to stop.  If
-  this ever happens, ptybuffer just exits without making sure that all
-  data is sent to connected sockets.  You can repair this by wrapping
-  into a script which, for example, ends in a read with some timeout.
 
 - New version have not been tested much before release.
 
@@ -131,9 +137,7 @@ ARE NO KNOWN BACKDOORS IN THEM!  IT'S OPEN SOURCE, SO YOU CAN CHECK!
 I tried my best.  However I am human.  So I make mistakes.  Be prepared.
 All I guarantee is, that I never do anything to harm *you* by purpose.
 
-Copyright (C)2004-2014 by Valentin Hilbig
+Copyright (C)2004-2016 by Valentin Hilbig
 
 ptybuffer may be distributed freely under the conditions of the
 GPL2 (GNU General Public License version 2) or higher.
-
--Tino
