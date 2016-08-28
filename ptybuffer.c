@@ -1,6 +1,6 @@
 /* ptybuffer: daemonize interactive tty line driven programs with output history
  *
- * Copyright (C)2004-2013 Valentin Hilbig <webmaster@scylla-charybdis.com>
+ * Copyright (C)2004-2016 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,7 +30,7 @@
 #include "tino/getopt.h"
 #include "tino/proc.h"
 #include "tino/filetool.h"
-#include "tino/signals.h"
+#include "tino/sock_tool.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -293,12 +293,15 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       xDP(("() close"));
       file_log("close %d: %d sockets",
-	       tino_sock_fdO(sock), tino_sock_useO());
+	       tino_sock_fdO(sock), tino_sock_useO()-1);
       /* propagate close of stdin main socket
        * in case we use sockfile=-
        */
       if (c->p->sock==sock)
-	c->p->sock	= 0;
+	{
+	  c->p->sock	= 0;
+	  c->p->forcepoll	= 1;
+	}
       if (c->infill && !c->p->kill_incomplete)
 	send_to_pty(c, c->infill);
       return TINO_SOCK_FREE;
@@ -307,10 +310,20 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       xDP(("() poll"));
       /* If something is waiting to be written
        * mark this side as readwrite, else only read.
+       * Terminate after everything has been written if pty was closed.
        */
-      return (c->outpos<c->outfill || c->screenpos<c->p->blockcount
-	      ? TINO_SOCK_READWRITE
-	      : TINO_SOCK_READ);
+      xDP((" %d, %d, %d, %d @ %p", c->outpos, c->outfill, c->screenpos, c->p->blockcount, c->p->pty));
+      if (c->p->pty)
+	return c->outpos<c->outfill || c->screenpos<c->p->blockcount
+		? TINO_SOCK_READWRITE
+		: TINO_SOCK_READ;
+      /* XXX TODO XXX
+       * half close socket here?
+       */
+      if (c->outpos<c->outfill || c->screenpos<c->p->blockcount)
+	return TINO_SOCK_WRITE;
+      file_log("closing %d: all data written");
+      return TINO_SOCK_EOF;
 
     case TINO_SOCK_PROC_READ:
       xDP(("() read"));
@@ -447,6 +460,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       tino_FATAL(sock!=p->pty);
       p->pty	= 0;
+      p->forcepoll	= 1;
       file_log("main: close master");
       return TINO_SOCK_CLOSE;
 
@@ -461,9 +475,17 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
       /* If something is waiting to be written
        * mark this side as readwrite, else only read.
        */
-      return (p->send->count || (p->out && p->outpos<p->outlen)
-	      ? TINO_SOCK_READWRITE
-	      : TINO_SOCK_READ);
+      if (p->sock)
+        return p->send->count || (p->out && p->outpos<p->outlen)
+		? TINO_SOCK_READWRITE
+		: TINO_SOCK_READ;
+      /* XXX TODO XXX
+       * half close pty here?  Is this supported?
+       */
+      if (p->send->count || (p->out && p->outpos<p->outlen))
+	return TINO_SOCK_WRITE;
+      file_log("main: closing master, all data written");
+      return TINO_SOCK_EOF;
 
     case TINO_SOCK_PROC_READ:
       /* Save output from the terminal in our internal buffer
@@ -622,15 +644,6 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 
   xDP(("daemonloop(%d,%d)", sock, master));
 
-  /* Treat stdin as the first connect?
-   * This is also set if sock==0
-   * stdin_use is the duped fd (as stdin might be redirected).
-   */
-  if (params->first_connect)
-    work.sock		= ptybuffer_new_fd(&work, params->first_connect);
-
-  if (sock)
-    work.sock		= tino_sock_new_fdAn(sock, sock_process, &work);
   work.pty		= tino_sock_new_fdAn(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
@@ -640,6 +653,15 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   work.history_tail	= params->history_tail;
   work.immediate	= params->immediate;
   work.kill_incomplete	= params->kill_incomplete;
+
+  /* Treat stdin as the first connect?
+   * This is also set if sock==0 (see main())
+   */
+  if (params->first_connect)
+    work.sock		= ptybuffer_new_fd(&work, params->first_connect);
+
+  if (sock)
+    work.sock		= tino_sock_new_fdAn(sock, sock_process, &work);
 
   /* Actually I should extend this:
    *
@@ -653,12 +675,13 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
    * If terminal is closed and all data was written, close the write
    * side and linger until socket is closed.
    */
-  while (work.pty && work.sock)
+  while (work.pty || work.sock)
     {
       int	tmp;
 
       tmp		= work.forcepoll;
       work.forcepoll	= 0;
+      xDP((" pty=%p sock=%p forcepoll=%d", work.pty, work.sock, tmp));
       if (tino_sock_selectEn(tmp)<0)
 	tino_exit("select");
     }
@@ -689,6 +712,7 @@ log_childstatus(pid_t pid)
   char	*buf;
   int	ret;
 
+  file_log("main: waiting for child: %ld", (long)pid);
   ret	= tino_wait_child_exact(pid, &buf);
   file_log("main: child %s", buf);
   return ret;
@@ -907,7 +931,7 @@ main(int argc, char **argv)
    */
   stderr_saved	= dup(2);
   if (!sock || params.first_connect)
-    params.first_connect	= dup(0);
+    params.first_connect	= tino_sock_wrapO(0, 1, TINO_SOCK_WRAP_SHAPE_NORMAL);
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
     {
       char	*env;

@@ -3,6 +3,12 @@
 	* ptybuffer.c (main): Bugfix: Stdin of the child was accidentally
 	closed when using -d.  This changes the child interface a bit,
 	so minor version needs an increment (even there is no new feature).
+	(daemonloop): moved socket creation to correctly show socket count
+	(connect_process): do not count socket which is about to be closed
+	(connect_process): write last output on PTY close
+	(master_process): write all input on master socket close
+	(daemonloop): do not terminate as long as there is data to write
+	(main): stdin/stdout socket wrapper for proper operation
 
 2007-09-21    <tino@firebird.03.softkill.net>
 
