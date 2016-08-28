@@ -722,7 +722,7 @@ main(int argc, char **argv)
 		      TINO_GETOPT_DEBUG
 #endif
 		      " sockfile command [args...]\n"
-		      "	if sockfile=- then connection comes from stdin.\n"
+		      "	if sockfile=- then connection comes from stdin (implies -s).\n"
 		      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the\n"
 		      "	pty are silently discarded if option -i is not present."
 		      ,
@@ -774,7 +774,9 @@ main(int argc, char **argv)
 		      , &params.kill_incomplete,
 
 		      TINO_GETOPT_STRING
-		      "l file	write activity log to file (- to stderr)"
+		      "l file	write activity log to file.  If file is - then:\n"
+		      "		- log goes to stderr\n"
+		      "		- and stderr of the child is not connected to the pty"
 		      , &logfile,
 
 		      TINO_GETOPT_MIN_PTR
@@ -895,7 +897,7 @@ main(int argc, char **argv)
     }
   argn++;
   fd	= -1;	/* only to skip a warning */
-  if (!foreground)
+  if (!foreground)	/* we want to do this here, before the fork() */
     if ((fd=open("/dev/null", O_RDWR))<0)
       tino_exit("/dev/null");
 
@@ -910,18 +912,21 @@ main(int argc, char **argv)
     {
       char	*env;
 
+      /* forkpty() created fds 0,1,2 for us	*/
       mypid	= 0;
 
       /* Close the writing pipe
        * and all other not needed file descriptors.
        * Then exec the wanted program
        */
-      tino_file_close_ignO(sock);
+      if (sock)	/* if sock=0 (see above) do not close it, as it is from forkpty()	*/
+        tino_file_close_ignO(sock);
       if (!foreground)
 	{
 	  close(fd);
 	  close(fds[1]);
 	}
+      /* Special: keep stderr of child on stderr	*/
       if (logfile && !strcmp(logfile, "-"))
 	dup2(stderr_saved, 2);
       tino_file_close_ignO(stderr_saved);

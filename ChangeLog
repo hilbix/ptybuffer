@@ -1,3 +1,9 @@
+2016-08-28  Valentin Hilbig  <tino@medusa.03.softkill.org>
+
+	* ptybuffer.c (main): Bugfix: Stdin of the child was accidentally
+	closed when using -d.  This changes the child interface a bit,
+	so minor version needs an increment (even there is no new feature).
+
 2007-09-21    <tino@firebird.03.softkill.net>
 
 	* ptybuffer.c (do_check): resource leakage fixed: Option -c forgot
@@ -41,7 +47,7 @@
 	issue or forgotten buggy code before the skipped infoblocks were
 	printed?  Problem showed up on 64 bit platforms first, I am really
 	puzzled why not before.
-	
+
 2007-08-25    <tino@firebird.03.softkill.net>
 
 	* Makefile.tino (DISTCLEAN): cleans for php/ test socket
