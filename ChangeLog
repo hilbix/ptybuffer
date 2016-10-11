@@ -1,3 +1,11 @@
+2016-10-11  Valentin Hilbig  <tino@medusa.03.softkill.org>
+
+	* ptybuffer.c (daemonloop): Correcting end loop condition, now
+	ptybuffer terminates when there are no more sockets.
+	(sock_process): correcting close condition.  Close main socket if
+	there are no other sockets.  This means, as long as some socket
+	hangs, you can open new sockets.
+
 2016-08-28  Valentin Hilbig  <tino@medusa.03.softkill.org>
 
 	* ptybuffer.c (main): Bugfix: Stdin of the child was accidentally

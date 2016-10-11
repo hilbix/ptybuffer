@@ -609,8 +609,13 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       
     case TINO_SOCK_PROC_EOF:
     case TINO_SOCK_PROC_POLL:
-      xDP(("sock_process() ACCEPT"));
-      return TINO_SOCK_ACCEPT;
+      if (tino_sock_useO()>1)
+        {
+          xDP(("sock_process() ACCEPT"));
+          return TINO_SOCK_ACCEPT;
+	}
+      xDP(("sock_process() EOF"));
+      return TINO_SOCK_EOF;
 
     case TINO_SOCK_PROC_READ:
     case TINO_SOCK_PROC_WRITE:
@@ -663,19 +668,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   if (sock)
     work.sock		= tino_sock_new_fdAn(sock, sock_process, &work);
 
-  /* Actually I should extend this:
-   *
-   * As long as there is a socket, loop.
-   *
-   * If terminal is closed, then close work.sock, too.
-   *
-   * Any socket which tries to write to the closed terminal is closed,
-   * too.
-   *
-   * If terminal is closed and all data was written, close the write
-   * side and linger until socket is closed.
-   */
-  while (work.pty || work.sock)
+  while (tino_sock_useO())
     {
       int	tmp;
 
