@@ -211,6 +211,7 @@ struct ptybuffer_params
     long		history_length;
     long		history_tail;
     int			immediate, kill_incomplete;
+    int			keepopen;
   };
 struct ptybuffer
   {
@@ -224,6 +225,7 @@ struct ptybuffer
     long		history_length;
     long		history_tail;
     int			immediate, kill_incomplete;
+    int			keepopen;
   };
 
 #define	PTYBUFFER_MAX_INPUTLINE		10240	/* if you change this value, change the next one, too!	*/
@@ -609,7 +611,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       
     case TINO_SOCK_PROC_EOF:
     case TINO_SOCK_PROC_POLL:
-      if (tino_sock_useO()>1)
+      if (tino_sock_useO()>1 && (p->keepopen || p->pty>0))
         {
           xDP(("sock_process() ACCEPT"));
           return TINO_SOCK_ACCEPT;
@@ -658,6 +660,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   work.history_tail	= params->history_tail;
   work.immediate	= params->immediate;
   work.kill_incomplete	= params->kill_incomplete;
+  work.keepopen		= params->keepopen;
 
   /* Treat stdin as the first connect?
    * This is also set if sock==0 (see main())
@@ -756,6 +759,7 @@ main(int argc, char **argv)
 		      TINO_GETOPT_FLAG
 		      "c	Check if the socket appears to be living.\n"
 		      "		returns 42 if so, 24 if not and no command.\n"
+		      "		Checks the PTY to be alive, unless option -w is given\n"
 		      "		Use with option -f to re-create the socket."
 		      , &check,
 
@@ -834,6 +838,13 @@ main(int argc, char **argv)
 		      , &params.history_tail,
 		      -1,
 		      -1,
+
+		      TINO_GETOPT_FLAG
+		      "w	wait for all connections to terminate before closing\n"
+		      "		before closing the main socket.\n"
+		      "		Option -c then no more checks if command is alive."
+		      , &params.keepopen,
+
 
 		      NULL
 		      );

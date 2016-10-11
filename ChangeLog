@@ -5,6 +5,10 @@
 	(sock_process): correcting close condition.  Close main socket if
 	there are no other sockets.  This means, as long as some socket
 	hangs, you can open new sockets.
+	(struct ptybuffer_params, struct ptybuffer, main, daemonloop): new
+	option -w to keep main socket open until last socket disconnects.
+	(sock_process): close main socket as soon as pty is closed, unless
+	option -w is given.
 
 2016-08-28  Valentin Hilbig  <tino@medusa.03.softkill.org>
 
