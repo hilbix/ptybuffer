@@ -579,7 +579,7 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
   buf->p	= p;
   if (p->history_tail>=0 && p->blockcount>p->history_tail)
     buf->minscreenpos	= p->blockcount-p->history_tail;
-  sock		= tino_sock_new_fdAn(fd, connect_process, buf);
+  sock		= tino_sock_new_fdANn(fd, connect_process, buf);
 
   file_log("connect %d: %d sockets", fd, tino_sock_useO());
   return sock;
@@ -651,7 +651,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 
   xDP(("daemonloop(%d,%d)", sock, master));
 
-  work.pty		= tino_sock_new_fdAn(master, master_process, &work);
+  work.pty		= tino_sock_new_fdANn(master, master_process, &work);
   work.screen		= tino_glist_new(0);
   work.send		= tino_glist_new(0);
   work.forcepoll	= 1;
@@ -669,7 +669,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
     work.sock		= ptybuffer_new_fd(&work, params->first_connect);
 
   if (sock)
-    work.sock		= tino_sock_new_fdAn(sock, sock_process, &work);
+    work.sock		= tino_sock_new_fdANn(sock, sock_process, &work);
 
   while (tino_sock_useO())
     {
