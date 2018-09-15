@@ -1,36 +1,34 @@
-THIS IS RELEASE EARLY CODE!  Maybe that the latest version introduces bugs.
+> THIS IS RELEASE EARLY CODE!  Maybe that the latest version introduces bugs.
 
-ptybuffer
-=========
+[![PtyBuffer Build Status](https://api.cirrus-ci.com/github/hilbix/ptybuffer.svg?branch=master)](https://cirrus-ci.com/github/hilbix/ptybuffer/master)
 
-For the impatient
------------------
 
-```bash
-git clone https://github.com/hilbix/ptybuffer.git
-cd ptybuffer
-git submodule update --init
-make
-sudo make install
-```
+# ptybuffer
 
-```bash
-mkdir -p ~/bin ~/autostart ~/autorun
-cp scripts/autostart.sh ~/bin/
-cp scripts/helloworld.sh ~/autostart/
-cp autorun/helloworld.sh ~/autorun/
-{ crontab -l; echo '* * * * * bin/autostart.sh >/dev/null'; } | crontab -
-~/bin/autostart.sh
+## For the impatient
 
-socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
-socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
-```
+	git clone https://github.com/hilbix/ptybuffer.git
+	cd ptybuffer
+	git submodule update --init
+	make
+	sudo make install
 
-Infos:
-```bash
-./ptybuffer -h
-head test/test.sh
-```
+Example how to autostart and control processes in background:
+
+	mkdir -p ~/bin ~/autostart ~/autorun
+	cp scripts/autostart.sh ~/bin/
+	cp scripts/helloworld.sh ~/autostart/
+	cp autorun/helloworld.sh ~/autorun/
+	{ crontab -l; echo '* * * * * bin/autostart.sh >/dev/null'; } | crontab -
+	~/bin/autostart.sh
+
+	socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
+	socat - unix:/var/tmp/autostart/$LOGNAME/helloworld.sock
+
+More info:
+
+	./ptybuffer -h
+	head test/test.sh
 
 See also:
 
@@ -39,10 +37,9 @@ See also:
   in future it perhaps even can control them.
 
 
-About
------
+## About
 
-ptybuffer
+`ptybuffer`
 
 - daemonizes.  With option -d it runs in foreground
 
@@ -52,13 +49,13 @@ ptybuffer
 - gathers the output history of the pty for later view.  Currently
   this is 1000 reads (not neccessarily lines, see option -n).
 
-- waits for connects to the unix socket (command line argument 1)
+- listens for connects to the unix socket (command line arg 1)
 
-- outputs the pty history to the connected unix socket and
+- outputs the `PTY` history to the connected unix socket and
   continuously sends all new output to the connected unix socket.
 
 - reads (full) lines from the connected unix sockets and send them to
-  the `PTY` (line can be max. 4095 bytes long).
+  the `PTY` (line can be max. 10K bytes long or so).
 
 - allows multiple concurrent connects to the unix socket.  This way
   several persons in parallel can control one process.
@@ -67,11 +64,12 @@ This is better than running background tasks using screen or tmux:
 
 - Screen blocks all connects if one session freezes.  ptybuffer is
   thought to always let the program run, regardless what mess the
-  socket connections might do.  In case of a connect stall it just
-  discards data to the frozen connect and if the connect catches up
-  it tells it the fact.
+  socket connections might do.  If a connect stalls, it just discards
+  data to the frozen connect and if the connect catches up, it tells
+  the fact.
 
 - Concurrent access is no problem.  Lines are always sent as full lines.
+  (Except when option -i is used.)
 
 - History of output is clearly defined, not just something like a
   window.
@@ -94,8 +92,11 @@ This is better than running background tasks using screen or tmux:
   which might hide bugs.
 
 
-Bugs:
-=====
+# Bugs
+
+- Very long lines are discarded.  Use option -i if this is a problem.
+  Then, however, no line buffering is done, which might cause
+  confusion if more than one input socket is open.
 
 - ptybuffer does not unlink() the socket if option -f and -c are
   missing.  This is a feature.
@@ -112,8 +113,7 @@ Bugs:
   works good enough for me.
 
 
-Example:
-========
+# Example
 
 See introductory comment in test/test.sh
 
@@ -125,8 +125,7 @@ You need a program capable to send data to unix sockets to control
 the program running in ptybuffer.  `socat` is your friend.
 
 
-DISCLAIMER:
-===========
+# DISCLAIMER
 
 USE AT YOUR OWN RISK!  I CANNOT ACCEPT ANY LIABLILITY FOR ANYTHING!
 THIS *IS* RELEASE EARLY CODE!  IT IS CONSIDERED TO BE INSTABLE!
@@ -137,7 +136,9 @@ ARE NO KNOWN BACKDOORS IN THEM!  IT'S OPEN SOURCE, SO YOU CAN CHECK!
 I tried my best.  However I am human.  So I make mistakes.  Be prepared.
 All I guarantee is, that I never do anything to harm *you* by purpose.
 
-Copyright (C)2004-2016 by Valentin Hilbig
+Copyright (C)2004-2018 by Valentin Hilbig
 
 ptybuffer may be distributed freely under the conditions of the
 GPL2 (GNU General Public License version 2) or higher.
+
+(Note: In future I might re-release it more permissively under CLL)
