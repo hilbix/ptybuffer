@@ -1,6 +1,6 @@
 /* ptybuffer: daemonize interactive tty line driven programs with output history
  *
- * Copyright (C)2004-2016 Valentin Hilbig <webmaster@scylla-charybdis.com>
+ * Copyright (C)2004-2018 Valentin Hilbig <webmaster@scylla-charybdis.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
