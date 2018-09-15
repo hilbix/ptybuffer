@@ -324,7 +324,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       if (c->outpos<c->outfill || c->screenpos<c->p->blockcount)
         return TINO_SOCK_WRITE;
-      file_log("closing %d: all data written");
+      file_log("closing %d: all data written", tino_sock_fdO(sock));
       return TINO_SOCK_EOF;
 
     case TINO_SOCK_PROC_READ:
