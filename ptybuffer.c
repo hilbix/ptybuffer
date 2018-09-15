@@ -921,7 +921,7 @@ main(int argc, char **argv)
     {
       if (force && !tino_file_notsocketE(argv[argn]))
         unlink(argv[argn]);
-      sock	= tino_sock_unix_listen(argv[argn]);
+      sock	= tino_sock_unix_listenAi(argv[argn]);
     }
   argn++;
   fd	= -1;	/* only to skip a warning */
