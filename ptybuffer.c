@@ -212,6 +212,7 @@ struct ptybuffer_params
     long		history_tail;
     int			immediate, kill_incomplete;
     int			keepopen;
+    int			umask;
   };
 struct ptybuffer
   {
@@ -725,6 +726,7 @@ main(int argc, char **argv)
   int	foreground, check, force;
   int	fds[2];
   int	argn;
+  int	omask;
 
   tino_sigign(SIGPIPE);		/* make sure we do not get this signal	*/
   tino_sigdummy(SIGCHLD);	/* make sure we get EINTR on SIGCHLD	*/
@@ -736,6 +738,7 @@ main(int argc, char **argv)
   ioctl(0, TIOCGWINSZ, (char *)&winsz);
 #endif
 
+  omask	= umask(0);
   argn	= tino_getopt(argc, argv, 1, 0,
                       TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
 #if 0
@@ -839,6 +842,16 @@ main(int argc, char **argv)
                       -1,
                       -1,
 
+                      TINO_GETOPT_INT
+                      TINO_GETOPT_DEFAULT
+                      TINO_GETOPT_MIN
+                      TINO_GETOPT_MAX
+                      "u mask	use a different umask for ptybuffer"
+                      , &params.umask,
+                      omask,
+                      0,
+                      0777,
+
                       TINO_GETOPT_FLAG
                       "w	wait for all connections to terminate before closing\n"
                       "		before closing the main socket.\n"
@@ -851,6 +864,8 @@ main(int argc, char **argv)
   xDP(("[argn=%d]", argn));
   if (argn<=0)
     return 1;
+
+  umask(params.umask);
 
   if (logfile)
     {
@@ -969,7 +984,9 @@ main(int argc, char **argv)
       putenv(env);
 
       file_log("child: starting %s", argv[argn]);
+      umask(omask);
       execvp(argv[argn], argv+argn);
+      umask(params.umask);
 
       /* Tell about the error
        */
