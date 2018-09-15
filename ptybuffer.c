@@ -17,8 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301 USA.
  */
-#ifndef PTYBUFFER_HISTORY_LENGTH
-#define PTYBUFFER_HISTORY_LENGTH	1000
+#ifndef	PTYBUFFER_HISTORY_LENGTH
+#define	PTYBUFFER_HISTORY_LENGTH	1000
+#endif
+#ifndef	PTYBUFFER_MAX_INPUTLINE
+#define	PTYBUFFER_MAX_INPUTLINE		10240
 #endif
 
 #include "tino/file.h"
@@ -229,9 +232,6 @@ struct ptybuffer
     int			keepopen;
   };
 
-#define	PTYBUFFER_MAX_INPUTLINE		10240	/* if you change this value, change the next one, too!	*/
-#define	PTYBUFFER_MAX_INPUTLINE_STR	"10240"
-
 struct ptybuffer_connect
   {
     struct ptybuffer	*p;
@@ -331,7 +331,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
     case TINO_SOCK_PROC_READ:
       xDP(("() read"));
       /* Read data lines comming in.
-       * Only send full lines to the termina.
+       * Only send full lines to the terminal.
        *
        * For safety, the line length is limited.
        */
@@ -715,6 +715,9 @@ log_childstatus(pid_t pid)
   return ret;
 }
 
+#define	__STR_(X)	#X
+#define	__STR(X)	__STR_(X)
+
 /* This routine is too long
  */
 int
@@ -745,9 +748,12 @@ main(int argc, char **argv)
                       TINO_GETOPT_DEBUG
 #endif
                       " sockfile command [args...]\n"
-                      "	if sockfile=- then connection comes from stdin (implies -s).\n"
-                      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the\n"
-                      "	pty are silently discarded if option -i is not present."
+                      "	Remember:\n"
+                      "	- ptybuffer only sends complete lines to the command.\n"
+                      "	- lines longer than " __STR(PTYBUFFER_MAX_INPUTLINE) " bytes are silently discarded!\n"
+                      "	You need option -i if you expect longer lines.\n"
+                      "	Or use option -k to discard the last line if it is incomplete.\n"
+                      "	If sockfile=- then connection comes from stdin (implies -s).\n"
                       ,
 
                       TINO_GETOPT_USAGE
@@ -782,25 +788,20 @@ main(int argc, char **argv)
                       , &force,
 
                       TINO_GETOPT_FLAG
-                      "i	immediate mode, do not wait for full lines.\n"
-                      "		Without this option ptybuffer waits, until a full line is\n"
-                      "		received from clients, then it sends the line to the terminal.\n"
-                      "		If you are concerned that the pty never sees lines longer\n"
-                      "		than " PTYBUFFER_MAX_INPUTLINE_STR " then do not use this option\n"
-                      "		and set option -k!  See also option -k"
+                      "i	immediate mode, send data to PTY, not broken up into lines.\n"
+                      "		This allows lines longer than " __STR(PTYBUFFER_MAX_INPUTLINE) " bytes."
                       , &params.immediate,
 
                       TINO_GETOPT_FLAG
                       "k	kill incomplete lines on socket disconnect\n"
                       "		This was the old behavior of ptybuffer before 0.6.0.\n"
-                      "		Note:  When option -i and -k are used together, the behavior\n"
-                      "		might change in future to truncate overlong lines!"
+                      "		Has no effect when option -i is present (might change in future)"
                       , &params.kill_incomplete,
 
                       TINO_GETOPT_STRING
                       "l file	write activity log to file.  If file is - then:\n"
                       "		- log goes to stderr\n"
-                      "		- and stderr of the child is not connected to the pty"
+                      "		- child's stderr too (it is not connected to the pty then)"
                       , &logfile,
 
                       TINO_GETOPT_MIN_PTR
