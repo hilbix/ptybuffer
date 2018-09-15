@@ -354,8 +354,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
                      c->discards<10 ? " (option -i missing?)" :
                      c->discards<98 ? "" : " (suppressing further messages)");
         }
-      got	= read(tino_sock_fdO(sock),
-                       c->in+c->infill, sizeof c->in-c->infill);
+      got	= read(tino_sock_fdO(sock), c->in+c->infill, sizeof c->in-c->infill);
       xDP(("() read %d", got));
       if (got<=0)
         return got;	/* proper error handling done by upstream	*/
