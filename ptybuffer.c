@@ -236,6 +236,7 @@ struct ptybuffer_connect
   {
     struct ptybuffer	*p;
     int			infill, discard;
+    unsigned long	lines, bytes, discards;
     char		in[PTYBUFFER_MAX_INPUTLINE];
     int			outfill, outpos;
     char		out[BUFSIZ+BUFSIZ];
@@ -295,8 +296,6 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       /* Good bye to the other side
        */
       xDP(("() close"));
-      file_log("close %d: %d sockets",
-               tino_sock_fdO(sock), tino_sock_useO()-1);
       /* propagate close of stdin main socket
        * in case we use sockfile=-
        */
@@ -305,8 +304,17 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
           c->p->sock	= 0;
           c->p->forcepoll	= 1;
         }
-      if (c->infill && !c->p->kill_incomplete)
-        send_to_pty(c, c->infill);
+      if (c->infill)	/* cannot happen with option -i	*/
+        {
+          if (c->p->kill_incomplete)
+            c->discards++;
+          else
+            {
+              file_log("close %d: sending incomplete last line %lu (option -k missing?)", tino_sock_fdO(sock), ++c->lines);
+              send_to_pty(c, c->infill);
+            }
+        }
+      file_log("close %d: %d sockets, %llu bytes received, %lu/%lu lines discarded", tino_sock_fdO(sock), tino_sock_useO()-1, c->bytes, c->discards, c->lines);
       return TINO_SOCK_FREE;
 
     case TINO_SOCK_PROC_POLL:
@@ -339,6 +347,12 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
         {
           c->discard	= 1;	/* line too long	*/
           c->infill	= 0;
+          if (++c->discards < 100)
+            file_log("read %d: discarding overlong line %lu%s",
+                     tino_sock_fdO(sock),
+                     c->lines+1,
+                     c->discards<10 ? " (option -i missing?)" :
+                     c->discards<98 ? "" : " (suppressing further messages)");
         }
       got	= read(tino_sock_fdO(sock),
                        c->in+c->infill, sizeof c->in-c->infill);
@@ -346,6 +360,7 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       if (got<=0)
         return got;	/* proper error handling done by upstream	*/
       c->infill	+= got;
+      c->bytes	+= got;
 
       if (c->p->immediate)
         send_to_pty(c, c->infill);
@@ -356,8 +371,8 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
            */
           while (c->infill && (pos=memchr(c->in, '\n', (size_t)c->infill))!=0)
             {
-              pos++;
-              send_to_pty(c, pos-c->in);
+              c->lines++;
+              send_to_pty(c, ++pos - c->in);
             }
         }
       return got;
