@@ -76,13 +76,13 @@ file_timestamp(FILE *fd, int showpid)
   time(&tim);
   gmtime_r(&tim, &tm);
   fprintf(fd,
-	  "%4d-%02d-%02d %02d:%02d:%02d ",
-	  1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
-	  tm.tm_hour, tm.tm_min, tm.tm_sec);
+          "%4d-%02d-%02d %02d:%02d:%02d ",
+          1900+tm.tm_year, tm.tm_mon+1, tm.tm_mday,
+          tm.tm_hour, tm.tm_min, tm.tm_sec);
   if (showpid)
     {
       if (!mypid)
-	mypid	= getpid();
+        mypid	= getpid();
       fprintf(fd, "%ld: ", (long)mypid);
     }
 }
@@ -106,21 +106,21 @@ file_out(void *_ptr, size_t len)
   else
     while (len)
       {
-	int	i;
+        int	i;
 
-	if (!in_line)
-	  file_timestamp(fd, 0);
-	in_line	= 1;
-	for (i=0; i<len; i++)
-	  if (((char *)ptr)[i]=='\n')
-	    {
-	      in_line	= 0;
-	      i++;
-	      break;
-	    }
-	tino_file_fwriteE(fd, ptr, i);
-	ptr	+= i;
-	len	-= i;
+        if (!in_line)
+          file_timestamp(fd, 0);
+        in_line	= 1;
+        for (i=0; i<len; i++)
+          if (((char *)ptr)[i]=='\n')
+            {
+              in_line	= 0;
+              i++;
+              break;
+            }
+        tino_file_fwriteE(fd, ptr, i);
+        ptr	+= i;
+        len	-= i;
       }
   file_flush_close(fd);
 }
@@ -178,9 +178,9 @@ parent(pid_t pid, int *fds)
   while ((got=read(fds[0], buf, sizeof buf-1))==-1)
     if (errno!=EINTR && errno!=EAGAIN)
       {
-	perror("read");
-	got	= 0;
-	break;
+        perror("read");
+        got	= 0;
+        break;
       }
   tino_file_close_ignO(fds[0]);
 
@@ -295,17 +295,17 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       xDP(("() close"));
       file_log("close %d: %d sockets",
-	       tino_sock_fdO(sock), tino_sock_useO()-1);
+               tino_sock_fdO(sock), tino_sock_useO()-1);
       /* propagate close of stdin main socket
        * in case we use sockfile=-
        */
       if (c->p->sock==sock)
-	{
-	  c->p->sock	= 0;
-	  c->p->forcepoll	= 1;
-	}
+        {
+          c->p->sock	= 0;
+          c->p->forcepoll	= 1;
+        }
       if (c->infill && !c->p->kill_incomplete)
-	send_to_pty(c, c->infill);
+        send_to_pty(c, c->infill);
       return TINO_SOCK_FREE;
 
     case TINO_SOCK_PROC_POLL:
@@ -316,14 +316,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       xDP((" %d, %d, %d, %d @ %p", c->outpos, c->outfill, c->screenpos, c->p->blockcount, c->p->pty));
       if (c->p->pty)
-	return c->outpos<c->outfill || c->screenpos<c->p->blockcount
-		? TINO_SOCK_READWRITE
-		: TINO_SOCK_READ;
+        return c->outpos<c->outfill || c->screenpos<c->p->blockcount
+                ? TINO_SOCK_READWRITE
+                : TINO_SOCK_READ;
       /* XXX TODO XXX
        * half close socket here?
        */
       if (c->outpos<c->outfill || c->screenpos<c->p->blockcount)
-	return TINO_SOCK_WRITE;
+        return TINO_SOCK_WRITE;
       file_log("closing %d: all data written");
       return TINO_SOCK_EOF;
 
@@ -335,30 +335,30 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        * For safety, the line length is limited.
        */
       if (c->infill>=sizeof c->in)
-	{
-	  c->discard	= 1;	/* line too long	*/
-	  c->infill	= 0;
-	}
+        {
+          c->discard	= 1;	/* line too long	*/
+          c->infill	= 0;
+        }
       got	= read(tino_sock_fdO(sock),
-		       c->in+c->infill, sizeof c->in-c->infill);
+                       c->in+c->infill, sizeof c->in-c->infill);
       xDP(("() read %d", got));
       if (got<=0)
-	return got;	/* proper error handling done by upstream	*/
+        return got;	/* proper error handling done by upstream	*/
       c->infill	+= got;
 
       if (c->p->immediate)
-	send_to_pty(c, c->infill);
+        send_to_pty(c, c->infill);
       else
-	{
-	  /* Send the lines to the terminal
-	   * One by one.
-	   */
-	  while (c->infill && (pos=memchr(c->in, '\n', (size_t)c->infill))!=0)
-	    {
-	      pos++;
-	      send_to_pty(c, pos-c->in);
-	    }
-	}
+        {
+          /* Send the lines to the terminal
+           * One by one.
+           */
+          while (c->infill && (pos=memchr(c->in, '\n', (size_t)c->infill))!=0)
+            {
+              pos++;
+              send_to_pty(c, pos-c->in);
+            }
+        }
       return got;
 
     case TINO_SOCK_PROC_WRITE:
@@ -368,61 +368,61 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
        * We have it all.
        */
       if (c->outpos>=c->outfill)
-	{
-	  TINO_GLIST_ENT	list;
-	  long long		min;
+        {
+          TINO_GLIST_ENT	list;
+          long long		min;
 
-	  c->outpos	= 0;
-	  c->outfill	= 0;
-	  /* always >0, only <0 on overruns
-	   */
-	  min		= c->p->blockcount-c->p->screen->count;
-	  if (c->minscreenpos && min<c->minscreenpos)
-	    {
-	      min		= c->minscreenpos;
-	      c->minscreenpos	= 0;
-	    }
-	  if (min>c->screenpos)
-	    {
-	      c->outfill	= snprintf(c->out, sizeof c->out,
-					   "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
-					   c->p->skipbytes-c->screenbytes, min-c->screenpos);
-	      c->screenpos	= min;
-	      c->screenbytes	= c->p->skipbytes;
-	    }
-	  /* Find the proper infoblock
-	   *
-	   * Well, I should optimize this,
-	   * but ptybuffer was not written to handle enourmous
-	   * amounts of data and enourmous number of connects.
-	   */
-	  list	= c->p->screen->list;
-	  for (; min<c->screenpos && list; min++)
-	    list	= list->next;
-	  for (; list; c->screenpos++, list=list->next)
-	    {
-	      int	max;
+          c->outpos	= 0;
+          c->outfill	= 0;
+          /* always >0, only <0 on overruns
+           */
+          min		= c->p->blockcount-c->p->screen->count;
+          if (c->minscreenpos && min<c->minscreenpos)
+            {
+              min		= c->minscreenpos;
+              c->minscreenpos	= 0;
+            }
+          if (min>c->screenpos)
+            {
+              c->outfill	= snprintf(c->out, sizeof c->out,
+                                           "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
+                                           c->p->skipbytes-c->screenbytes, min-c->screenpos);
+              c->screenpos	= min;
+              c->screenbytes	= c->p->skipbytes;
+            }
+          /* Find the proper infoblock
+           *
+           * Well, I should optimize this,
+           * but ptybuffer was not written to handle enourmous
+           * amounts of data and enourmous number of connects.
+           */
+          list	= c->p->screen->list;
+          for (; min<c->screenpos && list; min++)
+            list	= list->next;
+          for (; list; c->screenpos++, list=list->next)
+            {
+              int	max;
 
-	      max	= sizeof c->out-c->outfill;
-	      if (list->len>max)
-		break;
-	      memcpy(c->out+c->outfill, list->data, list->len);
-	      c->outfill	+= list->len;
-	    }
-	}
+              max	= sizeof c->out-c->outfill;
+              if (list->len>max)
+                break;
+              memcpy(c->out+c->outfill, list->data, list->len);
+              c->outfill	+= list->len;
+            }
+        }
       /* This should not happen, but ..
        */
       if (!c->outfill)
-	{
-	  xDP(("() write cancel"));
-	  return 1;
-	}
+        {
+          xDP(("() write cancel"));
+          return 1;
+        }
       xDP(("() write(%d)", (int)(c->outfill-c->outpos)));
       put	= write(tino_sock_fdO(sock),
-			c->out+c->outpos, c->outfill-c->outpos);
+                        c->out+c->outpos, c->outfill-c->outpos);
       xDP(("() write %d", put));
       if (put>0)
-	c->outpos	+= put;
+        c->outpos	+= put;
       return put;
 
     default:
@@ -479,13 +479,13 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        */
       if (p->sock)
         return p->send->count || (p->out && p->outpos<p->outlen)
-		? TINO_SOCK_READWRITE
-		: TINO_SOCK_READ;
+                ? TINO_SOCK_READWRITE
+                : TINO_SOCK_READ;
       /* XXX TODO XXX
        * half close pty here?  Is this supported?
        */
       if (p->send->count || (p->out && p->outpos<p->outlen))
-	return TINO_SOCK_WRITE;
+        return TINO_SOCK_WRITE;
       file_log("main: closing master, all data written");
       return TINO_SOCK_EOF;
 
@@ -498,15 +498,15 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
       got	= read(tino_sock_fdO(sock), buf, sizeof buf);
       xDP(("master_process() read %d", got));
       if (got<0)
-	return -1;
+        return -1;
       if (got>0)
-	{
-	  file_out(buf, (size_t)got);
-	  tino_glist_add_n(p->screen, buf, (size_t)got);
-	  p->bytecount	+= got;
-	  p->blockcount++;
-	  p->forcepoll	= 1;
-	}
+        {
+          file_out(buf, (size_t)got);
+          tino_glist_add_n(p->screen, buf, (size_t)got);
+          p->bytecount	+= got;
+          p->blockcount++;
+          p->forcepoll	= 1;
+        }
       return got;
 
     case TINO_SOCK_PROC_WRITE:
@@ -516,50 +516,50 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
        * First: Free old used up output pointers
        */
       if (p->out && p->outpos>=p->outlen)
-	{
-	  free((void *)p->out);
-	  p->out	= 0;
-	}
+        {
+          free((void *)p->out);
+          p->out	= 0;
+        }
       /* fetch some more data which is waiting
        * to be written to the terminal
        */
       if (!p->out)
-	{
-	  TINO_GLIST_ENT	ent;
+        {
+          TINO_GLIST_ENT	ent;
 
-	  xDP(("master_process() write new"));
-	  ent		= tino_glist_get(p->send);
-	  p->outpos	= 0;
-	  p->outlen	= ent->len;
-	  p->out	= ent->data;
-	  ent->data	= 0;
-	  tino_glist_free(ent);
-	}
+          xDP(("master_process() write new"));
+          ent		= tino_glist_get(p->send);
+          p->outpos	= 0;
+          p->outlen	= ent->len;
+          p->out	= ent->data;
+          ent->data	= 0;
+          tino_glist_free(ent);
+        }
       /* Write something to the terminal
        */
       put	= write(tino_sock_fdO(sock),
-			p->out+p->outpos, p->outlen-p->outpos);
+                        p->out+p->outpos, p->outlen-p->outpos);
       xDP(("master_process() write %d", put));
       if (put>0)
-	{
-	  if (doecho)
-	    {
-	      TINO_GLIST_ENT	ent;
+        {
+          if (doecho)
+            {
+              TINO_GLIST_ENT	ent;
 
-	      ent	= tino_glist_add_n(p->screen, NULL, 10+put);
-	      strcpy(ent->data, "\n[sent: ");
-	      memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
-	      memcpy(ent->data+8+put, "]\n", (size_t)2);
-	      file_out(ent->data, 10+put);
-	      p->bytecount	= 10+put;
-	      p->blockcount++;
-	      p->forcepoll	= 1;
-	    }
-	  /* Remember which data was written.
-	   * Note that cleanup is done above.
-	   */
-	  p->outpos	+= put;
-	}
+              ent	= tino_glist_add_n(p->screen, NULL, 10+put);
+              strcpy(ent->data, "\n[sent: ");
+              memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
+              memcpy(ent->data+8+put, "]\n", (size_t)2);
+              file_out(ent->data, 10+put);
+              p->bytecount	= 10+put;
+              p->blockcount++;
+              p->forcepoll	= 1;
+            }
+          /* Remember which data was written.
+           * Note that cleanup is done above.
+           */
+          p->outpos	+= put;
+        }
       return put;
 
     default:
@@ -608,14 +608,14 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       tino_FATAL(sock!=p->sock);
       p->sock	= 0;
       return TINO_SOCK_CLOSE;
-      
+
     case TINO_SOCK_PROC_EOF:
     case TINO_SOCK_PROC_POLL:
       if (tino_sock_useO()>1 && (p->keepopen || p->pty>0))
         {
           xDP(("sock_process() ACCEPT"));
           return TINO_SOCK_ACCEPT;
-	}
+        }
       xDP(("sock_process() EOF"));
       return TINO_SOCK_EOF;
 
@@ -626,10 +626,10 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
       fd	= tino_sock_acceptI(tino_sock_fdO(sock));
       xDP(("sock_process() accept %d", fd));
       if (fd<0)
-	{
-	  file_log("accept: returned error %s", strerror(errno));
-	  return -1;
-	}
+        {
+          file_log("accept: returned error %s", strerror(errno));
+          return -1;
+        }
       tino_sock_pollOn(ptybuffer_new_fd(p, fd));
       break;
     }
@@ -679,7 +679,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
       work.forcepoll	= 0;
       xDP((" pty=%p sock=%p forcepoll=%d", work.pty, work.sock, tmp));
       if (tino_sock_selectEn(tmp)<0)
-	tino_exit("select");
+        tino_exit("select");
     }
 }
 
@@ -737,117 +737,117 @@ main(int argc, char **argv)
 #endif
 
   argn	= tino_getopt(argc, argv, 1, 0,
-		      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
+                      TINO_GETOPT_VERSION(PTYBUFFER_VERSION)
 #if 0
-		      TINO_GETOPT_DEBUG
+                      TINO_GETOPT_DEBUG
 #endif
-		      " sockfile command [args...]\n"
-		      "	if sockfile=- then connection comes from stdin (implies -s).\n"
-		      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the\n"
-		      "	pty are silently discarded if option -i is not present."
-		      ,
+                      " sockfile command [args...]\n"
+                      "	if sockfile=- then connection comes from stdin (implies -s).\n"
+                      "	Note that lines longer than " PTYBUFFER_MAX_INPUTLINE_STR " send to the\n"
+                      "	pty are silently discarded if option -i is not present."
+                      ,
 
-		      TINO_GETOPT_USAGE
-		      "h	This help"
-		      ,
+                      TINO_GETOPT_USAGE
+                      "h	This help"
+                      ,
 #if 0
-		      TINO_GETOPT_STRING
-		      "b brand	Branding running process name.\n"
-		      "		You can do 'killall brand' afterwards (use - for default)"
-		      , &brand, 
+                      TINO_GETOPT_STRING
+                      "b brand	Branding running process name.\n"
+                      "		You can do 'killall brand' afterwards (use - for default)"
+                      , &brand, 
 #endif
-		      TINO_GETOPT_FLAG
-		      "c	Check if the socket appears to be living.\n"
-		      "		returns 42 if so, 24 if not and no command.\n"
-		      "		Checks the PTY to be alive, unless option -w is given\n"
-		      "		Use with option -f to re-create the socket."
-		      , &check,
+                      TINO_GETOPT_FLAG
+                      "c	Check if the socket appears to be living.\n"
+                      "		returns 42 if so, 24 if not and no command.\n"
+                      "		Checks the PTY to be alive, unless option -w is given\n"
+                      "		Use with option -f to re-create the socket."
+                      , &check,
 
-		      TINO_GETOPT_FLAG
-		      "d	ptybuffer runs in foreground (see -s)\n"
-		      "		Else daemonizes: It detaches from the\n"
-		      "		current terminal and changes working dir to /"
-		      , &foreground,
+                      TINO_GETOPT_FLAG
+                      "d	ptybuffer runs in foreground (see -s)\n"
+                      "		Else daemonizes: It detaches from the\n"
+                      "		current terminal and changes working dir to /"
+                      , &foreground,
 
-		      TINO_GETOPT_FLAG
-		      "e	Echo input to terminal output.\n"
-		      "		Try this if 'stty echo' fails."
-		      , &doecho,
+                      TINO_GETOPT_FLAG
+                      "e	Echo input to terminal output.\n"
+                      "		Try this if 'stty echo' fails."
+                      , &doecho,
 
-		      TINO_GETOPT_FLAG
-		      "f	force socket creation.  (Also see -c)"
-		      , &force,
+                      TINO_GETOPT_FLAG
+                      "f	force socket creation.  (Also see -c)"
+                      , &force,
 
-		      TINO_GETOPT_FLAG
-		      "i	immediate mode, do not wait for full lines.\n"
-		      "		Without this option ptybuffer waits, until a full line is\n"
-		      "		received from clients, then it sends the line to the terminal.\n"
-		      "		If you are concerned that the pty never sees lines longer\n"
-		      "		than " PTYBUFFER_MAX_INPUTLINE_STR " then do not use this option\n"
-		      "		and set option -k!  See also option -k"
-		      , &params.immediate,
+                      TINO_GETOPT_FLAG
+                      "i	immediate mode, do not wait for full lines.\n"
+                      "		Without this option ptybuffer waits, until a full line is\n"
+                      "		received from clients, then it sends the line to the terminal.\n"
+                      "		If you are concerned that the pty never sees lines longer\n"
+                      "		than " PTYBUFFER_MAX_INPUTLINE_STR " then do not use this option\n"
+                      "		and set option -k!  See also option -k"
+                      , &params.immediate,
 
-		      TINO_GETOPT_FLAG
-		      "k	kill incomplete lines on socket disconnect\n"
-		      "		This was the old behavior of ptybuffer before 0.6.0.\n"
-		      "		Note:  When option -i and -k are used together, the behavior\n"
-		      "		might change in future to truncate overlong lines!"
-		      , &params.kill_incomplete,
+                      TINO_GETOPT_FLAG
+                      "k	kill incomplete lines on socket disconnect\n"
+                      "		This was the old behavior of ptybuffer before 0.6.0.\n"
+                      "		Note:  When option -i and -k are used together, the behavior\n"
+                      "		might change in future to truncate overlong lines!"
+                      , &params.kill_incomplete,
 
-		      TINO_GETOPT_STRING
-		      "l file	write activity log to file.  If file is - then:\n"
-		      "		- log goes to stderr\n"
-		      "		- and stderr of the child is not connected to the pty"
-		      , &logfile,
+                      TINO_GETOPT_STRING
+                      "l file	write activity log to file.  If file is - then:\n"
+                      "		- log goes to stderr\n"
+                      "		- and stderr of the child is not connected to the pty"
+                      , &logfile,
 
-		      TINO_GETOPT_MIN_PTR
-		      TINO_GETOPT_LONGINT
-		      TINO_GETOPT_DEFAULT
-		      TINO_GETOPT_MIN
-		      "n nr	number of history buckets to allocate\n"
-		      "		This is read()s and not lines."
-		      , &params.history_tail
-		      , &params.history_length,
-		      PTYBUFFER_HISTORY_LENGTH,
-		      1,
+                      TINO_GETOPT_MIN_PTR
+                      TINO_GETOPT_LONGINT
+                      TINO_GETOPT_DEFAULT
+                      TINO_GETOPT_MIN
+                      "n nr	number of history buckets to allocate\n"
+                      "		This is read()s and not lines."
+                      , &params.history_tail
+                      , &params.history_length,
+                      PTYBUFFER_HISTORY_LENGTH,
+                      1,
 
-		      TINO_GETOPT_STRING
-		      "o file	write terminal output to file (- to stdout)"
-		      , &outfile,
+                      TINO_GETOPT_STRING
+                      "o file	write terminal output to file (- to stdout)"
+                      , &outfile,
 
-		      TINO_GETOPT_FLAG
-		      "p	prefix output (option -o) with timestamp"
-		      ,	&dotimestamp,
+                      TINO_GETOPT_FLAG
+                      "p	prefix output (option -o) with timestamp"
+                      ,	&dotimestamp,
 
-		      TINO_GETOPT_FLAG
-		      "q	quiet operation (suppress start banners if no -l)"
-		      , &doquiet,
+                      TINO_GETOPT_FLAG
+                      "q	quiet operation (suppress start banners if no -l)"
+                      , &doquiet,
 
-		      TINO_GETOPT_FLAG
-		      "s	use stdin as first connected socket.\n"
-		      "		This is similar to sockfile=- but ptybuffer continues on EOF"
-		      , &params.first_connect,
+                      TINO_GETOPT_FLAG
+                      "s	use stdin as first connected socket.\n"
+                      "		This is similar to sockfile=- but ptybuffer continues on EOF"
+                      , &params.first_connect,
 
-		      TINO_GETOPT_MAX_PTR
-		      TINO_GETOPT_LONGINT
-		      TINO_GETOPT_DEFAULT
-		      TINO_GETOPT_MIN
-		      "t nr	number of tail buckets to print on connect\n"
-		      "		-1=all, else must be less than -n option."
-		      , &params.history_length
-		      , &params.history_tail,
-		      -1,
-		      -1,
+                      TINO_GETOPT_MAX_PTR
+                      TINO_GETOPT_LONGINT
+                      TINO_GETOPT_DEFAULT
+                      TINO_GETOPT_MIN
+                      "t nr	number of tail buckets to print on connect\n"
+                      "		-1=all, else must be less than -n option."
+                      , &params.history_length
+                      , &params.history_tail,
+                      -1,
+                      -1,
 
-		      TINO_GETOPT_FLAG
-		      "w	wait for all connections to terminate before closing\n"
-		      "		before closing the main socket.\n"
-		      "		Option -c then no more checks if command is alive."
-		      , &params.keepopen,
+                      TINO_GETOPT_FLAG
+                      "w	wait for all connections to terminate before closing\n"
+                      "		before closing the main socket.\n"
+                      "		Option -c then no more checks if command is alive."
+                      , &params.keepopen,
 
 
-		      NULL
-		      );
+                      NULL
+                      );
   xDP(("[argn=%d]", argn));
   if (argn<=0)
     return 1;
@@ -855,13 +855,13 @@ main(int argc, char **argv)
   if (logfile)
     {
       if (strcmp(logfile, "-"))
-	logfile	= tino_file_realpathE(logfile);
+        logfile	= tino_file_realpathE(logfile);
       file_log("status log: %s", logfile);
     }
   if (outfile)
     {
       if (strcmp(outfile, "-"))
-	outfile	= tino_file_realpathE(outfile);
+        outfile	= tino_file_realpathE(outfile);
       file_log("output log: %s", outfile);
     }
 
@@ -869,10 +869,10 @@ main(int argc, char **argv)
     {
       do_check(argv[argn]);
       if (argn+1>=argc)
-	{
-	  file_log("check: socket down: %s", argv[argn]);
-	  return 24;
-	}
+        {
+          file_log("check: socket down: %s", argv[argn]);
+          return 24;
+        }
     }
   else if (argn+1>=argc)
     tino_exit("missing command");
@@ -884,12 +884,12 @@ main(int argc, char **argv)
        * such that errors are propagated to the caller
        */
       if (pipe(fds))
-	tino_exit("pipe");
+        tino_exit("pipe");
 
       /* fork off a child
        */
       if ((pid=fork())!=0)
-	return parent(pid, fds);
+        return parent(pid, fds);
 
       mypid	= 0;
 
@@ -920,7 +920,7 @@ main(int argc, char **argv)
   if (strcmp(argv[argn], "-"))
     {
       if (force && !tino_file_notsocketE(argv[argn]))
-	unlink(argv[argn]);
+        unlink(argv[argn]);
       sock	= tino_sock_unix_listen(argv[argn]);
     }
   argn++;
@@ -950,13 +950,13 @@ main(int argc, char **argv)
       if (sock)	/* if sock=0 (see above) do not close it, as it is from forkpty()	*/
         tino_file_close_ignO(sock);
       if (!foreground)
-	{
-	  close(fd);
-	  close(fds[1]);
-	}
+        {
+          close(fd);
+          close(fds[1]);
+        }
       /* Special: keep stderr of child on stderr	*/
       if (logfile && !strcmp(logfile, "-"))
-	dup2(stderr_saved, 2);
+        dup2(stderr_saved, 2);
       tino_file_close_ignO(stderr_saved);
 
       /* Put the current PID into the environment.
@@ -992,9 +992,9 @@ main(int argc, char **argv)
        */
       dup2(fd, 0);
       if (!outfile || strcmp(outfile, "-"))
-	dup2(fd, 1);
+        dup2(fd, 1);
       if (!logfile || strcmp(logfile, "-"))
-	dup2(fd, 2);
+        dup2(fd, 2);
       tino_file_close_ignO(fd);
 
       setsid();
