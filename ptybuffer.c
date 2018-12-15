@@ -34,6 +34,7 @@
 #include "tino/proc.h"
 #include "tino/filetool.h"
 #include "tino/sock_tool.h"
+#include "tino/assoc-sort.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -50,6 +51,24 @@
 static const char	*outfile, *logfile;
 static int		doecho, dotimestamp, doquiet;
 static pid_t		mypid;
+static TINO_ASSOC	jigs;
+
+static void
+jig(const char *tag, const char *format, ...)
+{
+  va_list	list;
+  char		buf[256];
+
+  if (!jigs)
+    jigs	= tino_assoc_new(NULL);
+
+  va_start(list, format);
+  snprintf(buf, sizeof buf, format, list);
+  va_end(list);
+  buf[sizeof buf-1]	= 0;
+
+  tino_assoc_set(jigs, tag, tino_strdupO(buf));
+}
 
 /* As we need FD=2 to point to the tty, we need fileno(stderr)!=2.
  * But this is not supported.
@@ -817,6 +836,11 @@ main(int argc, char **argv)
                       , &params.immediate,
 
                       TINO_GETOPT_FLAG
+                      "j	support jigged names.  Replace {..} sequences with environment values\n"
+                      "		PID=PID of ptybuffer, CHILD=PID of child"
+                      , &params.immediate,
+
+                      TINO_GETOPT_FLAG
                       "k	kill incomplete lines on socket disconnect\n"
                       "		This was the old behavior of ptybuffer before 0.6.0.\n"
                       "		Has no effect when option -i is present (might change in future)"
@@ -890,6 +914,8 @@ main(int argc, char **argv)
   if (argn<=0)
     return 1;
 
+  jig("PPID", "%lld", getppid());
+
   umask(params.umask);
 
   if (logfile)
@@ -950,6 +976,7 @@ main(int argc, char **argv)
        * session group leader ..  Unclear ..
        */
     }
+  jig("PID", "%lld", getpid());
 
   /* Open some file descriptors
    * Do it here such that errors can be intercepted
@@ -981,6 +1008,8 @@ main(int argc, char **argv)
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
     {
       char	*env;
+
+      jig("CHILD", "%lld", (long long)getpid());
 
       /* forkpty() created fds 0,1,2 for us	*/
       mypid	= 0;
@@ -1026,6 +1055,9 @@ main(int argc, char **argv)
     }
   if (pid==(pid_t)-1)
     tino_exit("forkpty");
+
+  jig("CHILD", "%lld", (long long)pid);
+
   tino_file_close_ignO(stderr_saved);
   stderr_saved	= -1;				/* .. what an awful hack!	*/
   file_log("main: forked child %ld", (long)pid);
