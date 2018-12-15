@@ -51,6 +51,12 @@ static const char	*outfile, *logfile;
 static int		doecho, dotimestamp, doquiet;
 static pid_t		mypid;
 
+/* As we need FD=2 to point to the tty, we need fileno(stderr)!=2.
+ * But this is not supported.
+ * fdreopen(stderr, dup(original_stderr), "a+") does not exist, so ..
+ */
+static int		stderr_saved = -1;		 /* .. what an awful hack!	*/
+
 static FILE *
 file_open(FILE *fd, const char *name)
 {
@@ -58,6 +64,8 @@ file_open(FILE *fd, const char *name)
     return 0;
   if (strcmp(name, "-"))
     fd	= tino_file_fopenE(name, "a+");
+  else if (fd==stderr && stderr_saved>=0)		/* .. what an awful hack!	*/
+    fd	= tino_file_open_fdE(stderr_saved, "a+");	/* emulate missing fdreopen() */
   return fd;
 }
 
@@ -739,7 +747,7 @@ main(int argc, char **argv)
 {
   struct ptybuffer_params	params;
   pid_t	pid;
-  int	master, sock, fd, stderr_saved;
+  int	master, sock, fd;
   int	foreground, check, force;
   int	fds[2];
   int	argn;
@@ -871,7 +879,7 @@ main(int argc, char **argv)
 
                       TINO_GETOPT_FLAG
                       "w	wait for all connections to terminate before closing\n"
-                      "		before closing the main socket.\n"
+                      "		the main socket.\n"
                       "		Option -c then no more checks if command is alive."
                       , &params.keepopen,
 
@@ -966,6 +974,8 @@ main(int argc, char **argv)
    * This closes stderr, however perhaps we need it later again.
    */
   stderr_saved	= dup(2);
+  tino_file_close_on_exec_setE(stderr_saved);
+
   if (!sock || params.first_connect)
     params.first_connect	= tino_sock_wrapO(0, 1, TINO_SOCK_WRAP_SHAPE_NORMAL);
   if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
@@ -988,8 +998,12 @@ main(int argc, char **argv)
         }
       /* Special: keep stderr of child on stderr	*/
       if (logfile && !strcmp(logfile, "-"))
-        dup2(stderr_saved, 2);
-      tino_file_close_ignO(stderr_saved);
+        {
+          dup2(stderr_saved, 2);
+          tino_file_no_close_on_execE(2);
+          tino_file_close_ignO(stderr_saved);
+          stderr_saved	= -1;			/* .. what an awful hack!	*/
+        }
 
       /* Put the current PID into the environment.
        *
@@ -1013,6 +1027,7 @@ main(int argc, char **argv)
   if (pid==(pid_t)-1)
     tino_exit("forkpty");
   tino_file_close_ignO(stderr_saved);
+  stderr_saved	= -1;				/* .. what an awful hack!	*/
   file_log("main: forked child %ld", (long)pid);
 
   if (!foreground)
