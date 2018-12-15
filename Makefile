@@ -1,11 +1,11 @@
 # Makefile automatically generated, do not edit!
 # This output (only this Makefile) is Public Domain.
 #
-#@MD5TINOIGN@ Creation date: Tue Aug 29 10:33:44 DST 2017
+#@MD5TINOIGN@ Creation date: Sat Dec 15 18:48:25 CET 2018
 #
 # This file is based on following files:
 #@MD5TINOIGN@ 1: Makefile.tino
-#@MD5TINOIGN@ 2: /home/tino/src/ptybuffer/tino/Makefile.proto
+#@MD5TINOIGN@ 2: tino/Makefile.proto
 
 #
 #@MD5TINOIGN@ included: Makefile.tino
@@ -35,7 +35,7 @@ ADD_LDFLAGS=
 INSTALLPATH=/usr/local
 
 #
-#@MD5TINOIGN@ included: /home/tino/src/ptybuffer/tino/Makefile.proto
+#@MD5TINOIGN@ included: tino/Makefile.proto
 #
 
 # Automatically generated from "PROGS" above
@@ -74,6 +74,7 @@ VERSIONNAME=$(VERSIONFILE)
 
        GAWK=awk
       TOUCH=touch
+      MKDIR=mkdir
 
          CP=cp
       STRIP=strip
@@ -131,9 +132,11 @@ $(VERSIONFILE).py:	VERSION
 
 install::
 	$(RM) "$(INSTALLPATH)/bin/$(PROG1)"
+	$(MKDIR) -pm755 "$(INSTALLPATH)/bin"
 	$(CP) "$(PROG1)" "$(INSTALLPATH)/bin/$(PROG1)"
 	$(STRIP) "$(INSTALLPATH)/bin/$(PROG1)"
 	$(RM) "$(INSTALLPATH)/bin/$(PROG2)"
+	$(MKDIR) -pm755 "$(INSTALLPATH)/bin"
 	$(CP) "$(PROG2)" "$(INSTALLPATH)/bin/$(PROG2)"
 	$(STRIP) "$(INSTALLPATH)/bin/$(PROG2)"
 
