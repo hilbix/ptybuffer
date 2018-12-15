@@ -768,6 +768,7 @@ main(int argc, char **argv)
                       "	You need option -i if you expect longer lines.\n"
                       "	Or use option -k to discard the last line if it is incomplete.\n"
                       "	If sockfile=- then connection comes from stdin (implies -s).\n"
+                      "	Use sockfile=@name for Abstract Linux Sockets\n"
                       ,
 
                       TINO_GETOPT_USAGE
@@ -798,7 +799,8 @@ main(int argc, char **argv)
                       , &doecho,
 
                       TINO_GETOPT_FLAG
-                      "f	force socket creation.  (Also see -c)"
+                      "f	force socket creation.  (Also see -c)\n"
+                      "		Ignored for Abstract Linux Sockets."
                       , &force,
 
                       TINO_GETOPT_FLAG
@@ -949,7 +951,7 @@ main(int argc, char **argv)
   sock	= 0;
   if (strcmp(argv[argn], "-"))
     {
-      if (force && !tino_file_notsocketE(argv[argn]))
+      if (force && argv[argn][0]!='@' && !tino_file_notsocketE(argv[argn]))
         unlink(argv[argn]);
       sock	= tino_sock_unix_listenAi(argv[argn]);
     }
