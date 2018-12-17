@@ -574,7 +574,7 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
               memcpy(ent->data+8, p->out+p->outpos, (size_t)put);
               memcpy(ent->data+8+put, "]\n", (size_t)2);
               file_out(ent->data, 10+put);
-              p->bytecount	= 10+put;
+              p->bytecount	+= 10+put;
               p->blockcount++;
               p->forcepoll	= 1;
             }
