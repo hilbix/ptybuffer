@@ -67,7 +67,7 @@ jig(const char *tag, const char *format, ...)
   va_end(list);
   buf[sizeof buf-1]	= 0;
 
-  tino_assoc_set(jigs, tag, tino_strdupO(buf));
+  tino_assoc_set(jigs, tag, buf);
 }
 
 /* As we need FD=2 to point to the tty, we need fileno(stderr)!=2.
