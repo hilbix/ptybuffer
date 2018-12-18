@@ -399,13 +399,14 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
           c->outfill	= 0;
           /* always >0, only <0 on overruns
            */
-          min		= c->p->blockcount-c->p->screen->count;
-          if (c->minscreenpos && min<c->minscreenpos)
+          min		= c->p->blockcount - c->p->screen->count;
+          if (c->minscreenpos)
             {
-              min		= c->minscreenpos;
+              for (list=c->p->screen->list; min<c->minscreenpos && list; list=list->next, min++)
+                 c->screenbytes	-= list->len;
               c->minscreenpos	= 0;
             }
-          if (min>c->screenpos)
+          if (min > c->screenpos)
             {
               c->outfill	= snprintf(c->out, sizeof c->out,
                                            "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
