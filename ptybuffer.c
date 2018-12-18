@@ -34,7 +34,7 @@
 #include "tino/proc.h"
 #include "tino/filetool.h"
 #include "tino/sock_tool.h"
-#include "tino/assoc-sort.h"
+#include "tino/assoc.h"
 
 #include <setjmp.h>
 #include <unistd.h>
@@ -52,22 +52,46 @@ static const char	*outfile, *logfile;
 static int		doecho, dotimestamp, doquiet;
 static pid_t		mypid;
 static TINO_ASSOC	jigs;
+static int		jigging;
 
 static void
 jig(const char *tag, const char *format, ...)
 {
   va_list	list;
-  char		buf[256];
+  char		buf[PATH_MAX+10];
 
   if (!jigs)
     jigs	= tino_assoc_new(NULL);
 
   va_start(list, format);
-  snprintf(buf, sizeof buf, format, list);
+  vsnprintf(buf, sizeof buf, format, list);
   va_end(list);
   buf[sizeof buf-1]	= 0;
 
   tino_assoc_set(jigs, tag, buf);
+}
+
+static const char *
+jigged(const char *name)
+{
+  if (!jigging)
+    return name;
+
+  /* TODO XXX TODO implement this	*/
+  return name;
+}
+
+static void
+jig_setenv(const char *prefix)
+{
+  TINO_ASSOC_ITER	i;
+  char			buf[256];
+
+  for (i=tino_assoc_iter(jigs, 0); tino_assoc_more(i); tino_assoc_next(i))
+    {
+      snprintf(buf, sizeof buf, "%s%s", prefix, (char *)tino_assoc_key(i));
+      setenv(buf, tino_assoc_val(i), 1);
+    }
 }
 
 /* As we need FD=2 to point to the tty, we need fileno(stderr)!=2.
@@ -82,7 +106,7 @@ file_open(FILE *fd, const char *name)
   if (!name)
     return 0;
   if (strcmp(name, "-"))
-    fd	= tino_file_fopenE(name, "a+");
+    fd	= tino_file_fopenE(jigged(name), "a+");
   else if (fd==stderr && stderr_saved>=0)		/* .. what an awful hack!	*/
     fd	= tino_file_open_fdE(stderr_saved, "a+");	/* emulate missing fdreopen() */
   return fd;
@@ -243,6 +267,8 @@ struct ptybuffer_params
     int			immediate, kill_incomplete;
     int			keepopen;
     int			umask;
+    int			jigged;
+    int			about;
   };
 struct ptybuffer
   {
@@ -257,6 +283,7 @@ struct ptybuffer
     long		history_tail;
     int			immediate, kill_incomplete;
     int			keepopen;
+    int			about;
   };
 
 struct ptybuffer_connect
@@ -297,6 +324,25 @@ send_to_pty(struct ptybuffer_connect *c, int cnt)
   if ((c->infill-=cnt)>0)
     memmove(c->in, c->in+cnt, c->infill);
 }
+
+static void
+send_to_conn(struct ptybuffer_connect *c, const char *s, ...)
+{
+  va_list	list;
+  size_t	max;
+  int		cnt;
+
+  max	= sizeof c->out - c->outfill;
+  if (max<10)
+    return;
+
+  va_start(list, s);
+  cnt	= vsnprintf(c->out + c->outfill, max, s, list);
+  va_end(list);
+
+  c->outfill	+= cnt;
+}
+
 
 /* Handle data to a connected socket:
  * Send incoming to terminal,
@@ -427,9 +473,9 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
             }
           if (min > c->screenpos)
             {
-              c->outfill	= snprintf(c->out, sizeof c->out,
-                                           "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
-                                           c->p->skipbytes-c->screenbytes, min-c->screenpos);
+              send_to_conn(c,
+                           "\n[[%Ld bytes (%Ld infoblocks) skipped]]\n",
+                           c->p->skipbytes-c->screenbytes, min-c->screenpos);
               c->screenpos	= min;
               c->screenbytes	= c->p->skipbytes;
             }
@@ -612,6 +658,33 @@ master_process(TINO_SOCK sock, enum tino_sock_proctype type)
   return 0;
 }
 
+static void
+about(TINO_SOCK sock)
+{
+  struct ptybuffer_connect	*c = tino_sock_userO(sock);
+  TINO_ASSOC_ITER		i;
+  int				fd;
+  const char			*name;
+
+  fd	= tino_sock_fdO(sock);
+  name	= tino_sock_get_socknameN(fd);
+  jig("BYTES",         "%lld", (long long)c->p->bytecount);
+  jig("BLOCKS",        "%lld", (long long)c->p->blockcount);
+  jig("STARTBLOCK",    "%lld", (long long)c->minscreenpos);
+  jig("HISTORYBLOCKS", "%lld", (long long)c->p->screen->count);
+  jig("HISTORYMAX",    "%lld", (long long)c->p->history_length);
+  jig("SKIPBYTES",     "%lld", (long long)c->p->skipbytes);
+  jig("SKIPBLOCKS",    "%lld", (long long)(c->p->blockcount - c->p->screen->count));
+  jig("SOCKETS",       "%d",   tino_sock_useO());
+  jig("SOCKFD",        "%d",   fd);
+  jig("SOCKNAME",      "%s",   name);
+  tino_free_constO(name);
+
+  for (i=tino_assoc_iter(jigs, 0); tino_assoc_more(i); tino_assoc_next(i))
+    send_to_conn(c, "%s=%s\n", tino_assoc_key(i), tino_assoc_val(i));
+  send_to_conn(c, ".\n");
+}
+
 static TINO_SOCK
 ptybuffer_new_fd(struct ptybuffer *p, int fd)
 {
@@ -623,6 +696,9 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
   if (p->history_tail>=0 && p->blockcount>p->history_tail)
     buf->minscreenpos	= p->blockcount-p->history_tail;
   sock		= tino_sock_new_fdANn(fd, connect_process, buf);
+
+  if (p->about)
+    about(sock);
 
   file_log("connect %d: %d sockets", fd, tino_sock_useO());
   return sock;
@@ -704,6 +780,7 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
   work.immediate	= params->immediate;
   work.kill_incomplete	= params->kill_incomplete;
   work.keepopen		= params->keepopen;
+  work.about		= params->about;
 
   /* Treat stdin as the first connect?
    * This is also set if sock==0 (see main())
@@ -757,6 +834,19 @@ log_childstatus(pid_t pid)
   return ret;
 }
 
+static pid_t
+forkptyO(int *master)
+{
+  pid_t	pid;
+  char	name[PATH_MAX];
+
+  pid	= forkpty(master, name, NULL, NULL);
+  if (pid==(pid_t)-1)
+    tino_exit("forkpty");
+  jig("PTY", "%s", name);
+  return pid;
+}
+
 #define	__STR_(X)	#X
 #define	__STR(X)	__STR_(X)
 
@@ -796,12 +886,17 @@ main(int argc, char **argv)
                       "	You need option -i if you expect longer lines.\n"
                       "	Or use option -k to discard the last line if it is incomplete.\n"
                       "	If sockfile=- then connection comes from stdin (implies -s).\n"
-                      "	Use sockfile=@name for Abstract Linux Sockets\n"
+                      "	Use sockfile=@name for (unprotected) Abstract Linux Sockets\n"
                       ,
 
                       TINO_GETOPT_USAGE
                       "h	This help"
                       ,
+
+                      TINO_GETOPT_FLAG
+                      "a	Print about-header on connection.\n"
+                      "		This includes several lines of current variables."
+                      , &params.about,
 #if 0
                       TINO_GETOPT_STRING
                       "b brand	Branding running process name.\n"
@@ -836,10 +931,14 @@ main(int argc, char **argv)
                       "		This allows lines longer than " __STR(PTYBUFFER_MAX_INPUTLINE) " bytes."
                       , &params.immediate,
 
+#if 0
                       TINO_GETOPT_FLAG
                       "j	support jigged names.  Replace {..} sequences with environment values\n"
-                      "		PID=PID of ptybuffer, CHILD=PID of child"
-                      , &params.immediate,
+                      "		PTYBUFFER_PPID=PID of caller (before daemonizing)\n"
+                      "		PTYBUFFER_PID=PID of ptybuffer\n"
+                      "		PTYBUFFER_CHILD=PID of child\n"
+                      , &jigging,
+#endif
 
                       TINO_GETOPT_FLAG
                       "k	kill incomplete lines on socket disconnect\n"
@@ -915,7 +1014,7 @@ main(int argc, char **argv)
   if (argn<=0)
     return 1;
 
-  jig("PPID", "%lld", getppid());
+  jig("PPID", "%ld", (long)getppid());
 
   umask(params.umask);
 
@@ -977,7 +1076,7 @@ main(int argc, char **argv)
        * session group leader ..  Unclear ..
        */
     }
-  jig("PID", "%lld", getpid());
+  jig("PID", "%ld", (long)getpid());
 
   /* Open some file descriptors
    * Do it here such that errors can be intercepted
@@ -1006,11 +1105,9 @@ main(int argc, char **argv)
 
   if (!sock || params.first_connect)
     params.first_connect	= tino_sock_wrapO(0, 1, TINO_SOCK_WRAP_SHAPE_NORMAL);
-  if ((pid=forkpty(&master, NULL, NULL, NULL))==0)
+  if ((pid=forkptyO(&master))==0)
     {
-      char	*env;
-
-      jig("CHILD", "%lld", (long long)getpid());
+      jig("CHILD", "%ld", (long)getpid());
 
       /* forkpty() created fds 0,1,2 for us	*/
       mypid	= 0;
@@ -1035,15 +1132,10 @@ main(int argc, char **argv)
           stderr_saved	= -1;			/* .. what an awful hack!	*/
         }
 
-      /* Put the current PID into the environment.
-       *
-       * I don't even trust my eyes, but 120 shall be long enough ever.
-       */
-      env	= tino_allocO(120);
-      snprintf(env, 120, "PTYBUFFER_PID=%ld", (long)getppid());
-      env[119]	= 0;
-      putenv(env);
+      /* Fill the environment.  */
+      jig_setenv("PTYBUFFER_");
 
+      /* run the child	*/
       file_log("child: starting %s", argv[argn]);
       umask(omask);
       execvp(argv[argn], argv+argn);
@@ -1054,8 +1146,6 @@ main(int argc, char **argv)
       file_log("child: exec failed");
       tino_exit("execvp %s", argv[argn]);
     }
-  if (pid==(pid_t)-1)
-    tino_exit("forkpty");
 
   jig("CHILD", "%lld", (long long)pid);
 
