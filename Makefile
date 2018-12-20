@@ -1,7 +1,7 @@
 # Makefile automatically generated, do not edit!
 # This output (only this Makefile) is Public Domain.
 #
-#@MD5TINOIGN@ Creation date: Sat Dec 15 18:48:25 CET 2018
+#@MD5TINOIGN@ Creation date: Tue Dec 18 00:03:00 CET 2018
 #
 # This file is based on following files:
 #@MD5TINOIGN@ 1: Makefile.tino
@@ -185,7 +185,8 @@ $(PROG1).o:  ptybuffer.c tino/file.h tino/sysfix.h tino/sysfix_cygwin.h \
  tino/fatal.h tino/debug.h tino/sock_select.h tino/sock.h tino/file.h \
  tino/alloc.h tino/threads.h tino/strprintf.h tino/str.h tino/syscap.h \
  tino/sock_select_old.h tino/slist.h tino/getopt.h tino/proc.h \
- tino/filetool.h tino/sock_tool.h tino/signals.h ptybuffer_version.h
+ tino/filetool.h tino/sock_tool.h tino/signals.h tino/assoc.h tino/tmp.h \
+ ptybuffer_version.h
 
 
 # included: ptybufferconnect.d
