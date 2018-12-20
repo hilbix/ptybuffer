@@ -846,6 +846,16 @@ forkptyO(int *master)
   return pid;
 }
 
+static void
+info_check(const char *s)
+{
+  if (strlen(s)>BUFSIZ)
+    tino_exit("Argument to -y is too long");
+  while (*s && *s++!='\n');
+  if (*s)
+    tino_exit("Argument to -y must be a single line");
+}
+
 #define	__STR_(X)	#X
 #define	__STR(X)	__STR_(X)
 
@@ -855,6 +865,7 @@ int
 main(int argc, char **argv)
 {
   struct ptybuffer_params	params;
+  const char			*info;
   pid_t	pid;
   int	master, sock, fd;
   int	foreground, check, force;
@@ -1006,6 +1017,11 @@ main(int argc, char **argv)
                       "		Option -c then no more checks if command is alive."
                       , &params.keepopen,
 
+                      TINO_GETOPT_STRING
+                      TINO_GETOPT_DEFAULT
+                      "y info	Set PTYBUFFER_INFO variable to the given string"
+                      , &info,
+                      "",
 
                       NULL
                       );
@@ -1013,6 +1029,8 @@ main(int argc, char **argv)
   if (argn<=0)
     return 1;
 
+  info_check(info);
+  jig("INFO", "%s", info);
   jig("PPID", "%ld", (long)getppid());
 
   umask(params.umask);
