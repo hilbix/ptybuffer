@@ -915,7 +915,7 @@ main(int argc, char **argv)
                       "	You need option -i if you expect longer lines.\n"
                       "	Or use option -k to discard the last line if it is incomplete.\n"
                       "	If sockfile=- then connection comes from stdin (implies -s).\n"
-                      "	Use sockfile=@name for (unprotected) Abstract Linux Sockets\n"
+                      "	Use sockfile=@name for (unprotected) Abstract Linux Sockets"
                       ,
 
                       TINO_GETOPT_USAGE
