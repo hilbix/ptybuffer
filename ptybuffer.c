@@ -49,7 +49,7 @@
 #include "ptybuffer_version.h"
 
 static const char	*outfile, *logfile;
-static int		doecho, dotimestamp, doquiet;
+static int		doecho, dotimestamp, doquiet, gaping;
 static pid_t		mypid;
 static TINO_ASSOC	jigs;
 static int		jigging;
@@ -182,10 +182,9 @@ file_out(void *_ptr, size_t len)
 /* do not call this before the last fork
  */
 static void
-file_log(const char *s, ...)
+file_vlog(const char *s, va_list list)
 {
   FILE		*fd;
-  va_list	list;
   int		e;
 
   e	= errno;
@@ -197,14 +196,34 @@ file_log(const char *s, ...)
 
   file_timestamp(fd, 1);
 
-  va_start(list, s);
   vfprintf(fd, s, list);
-  va_end(list);
   fputc('\n', fd);
 
   file_flush_close(fd);
 
   errno	= e;
+}
+
+static void
+file_log(const char *s, ...)
+{
+  va_list	list;
+
+  va_start(list, s);
+  file_vlog(s, list);
+  va_end(list);
+}
+
+static void
+problem(const char *s, ...)
+{
+  va_list	list;
+
+  va_start(list, s);
+  file_vlog(s, list);
+  va_end(list);
+  if (!gaping)
+    tino_exit("use option -g to ignore problem (see log)");
 }
 
 /* main parent:
@@ -901,7 +920,7 @@ main(int argc, char **argv)
 
                       TINO_GETOPT_USAGE
                       "h	This help"
-                      ,
+                      , /*gmrvxz*/
 
                       TINO_GETOPT_FLAG
                       "a	Print about-header on connection.\n"
@@ -935,6 +954,10 @@ main(int argc, char **argv)
                       "f	force socket creation.  (Also see -c)\n"
                       "		Ignored for Abstract Linux Sockets."
                       , &force,
+
+                      TINO_GETOPT_FLAG
+                      "g	ignore some (gaping) circumstances, like leaked FDs"
+                      , &gaping,
 
                       TINO_GETOPT_FLAG
                       "i	immediate mode, send data to PTY, not broken up into lines.\n"
@@ -1111,14 +1134,18 @@ main(int argc, char **argv)
   fd	= -1;	/* only to skip a warning */
   if (!foreground)	/* we want to do this here, before the fork() */
     if ((fd=open("/dev/null", O_RDWR))<0)
-      tino_exit("/dev/null");
+      problem("main: cannot open /dev/null");
 
   /* Now fork off the PTY thread
    *
    * This closes stderr, however perhaps we need it later again.
    */
   stderr_saved	= dup(2);
-  tino_file_close_on_exec_setE(stderr_saved);
+
+   /* Close this handle on exec
+    */
+  if (tino_file_close_on_exec_setE(stderr_saved)<0)
+    problem("main: cannot set close-on-exec of FD %d", stderr_saved);
 
   if (!sock || params.first_connect)
     params.first_connect	= tino_sock_wrapO(0, 1, TINO_SOCK_WRAP_SHAPE_NORMAL);
@@ -1140,14 +1167,27 @@ main(int argc, char **argv)
           close(fd);
           close(fds[1]);
         }
-      /* Special: keep stderr of child on stderr	*/
+      /* Special: stderr-handling
+       *
+       * We have following cases here:
+       *
+       * - logfile is set and is not "-" => We do not need stderr_saved
+       * - logfile is set and is "-"     => Move stderr_saved to stderr of child
+       * - no logfile given and doquiet  => We do not need stderr_saved, as file_log outputs nothing
+       * - no logfile given, no doquiet  => stderr_saved must be closed in child, but is needed if exec fails
+       *
+       * F_DUPFD_CLOEXEC is a Linux special I do not want to use it above.
+       */
       if (logfile && !strcmp(logfile, "-"))
         {
           dup2(stderr_saved, 2);
-          tino_file_no_close_on_execE(2);
+          if (tino_file_no_close_on_execE(2)<0)
+            problem("child: stderr maybee does not work, cannot unset close-on-exec");
           tino_file_close_ignO(stderr_saved);
           stderr_saved	= -1;			/* .. what an awful hack!	*/
         }
+      else if (tino_file_close_on_exec_setE(stderr_saved)<0)
+        problem("child: FD %d may leak: cannot set close-on-exec", stderr_saved);
 
       /* Fill the environment.  */
       jig_setenv("PTYBUFFER_");
@@ -1187,7 +1227,8 @@ main(int argc, char **argv)
       tino_file_close_ignO(fd);
 
       setsid();
-      tino_file_chdirE("/");
+      if (tino_file_chdirE("/"))
+        problem("main: cannot cd /");
 
       /* Tell OK to the caller
        */
