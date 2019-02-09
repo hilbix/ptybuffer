@@ -1182,7 +1182,7 @@ main(int argc, char **argv)
         {
           dup2(stderr_saved, 2);
           if (tino_file_no_close_on_execE(2)<0)
-            problem("child: stderr maybee does not work, cannot unset close-on-exec");
+            problem("child: stderr maybe does not work, cannot unset close-on-exec");
           tino_file_close_ignO(stderr_saved);
           stderr_saved	= -1;			/* .. what an awful hack!	*/
         }
