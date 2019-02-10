@@ -36,6 +36,32 @@ See also:
   autostarts: `watcher.py /var/tmp/autostart/$LOGNAME/*.sock` and
   in future it perhaps even can control them.
 
+## Variables
+
+With option -a following variables are output:
+
+- `INFO` What was given to option `-y`
+- `PPID` process id of parent proces which forked ptybuffer
+- `PID` process id of ptybuffer
+- `PTY` the PTY the child is running on
+- `CHILD` process id of the forked child
+- `BYTES` number of bytes output by the child so far
+- `BLOCKS` number of blocks (reads) from the child
+- `STARTBLOCK` output starts with this block number
+- `HISTORYBLOCKS` number of history blocks available
+- `HISTORYMAX` max number of history blocks available (Option `-n`)
+- `SKIPBYTES` number of bytes no more in history
+- `SKIPBLOCKS` number of blocks no more in history
+- `SOCKETS` number of sockets used currently
+- `SOCKFD` current socket FD (see `/proc/$PID/fd/`)
+- `SOCKNAME` type and name of the socket used
+- `.` end of list
+
+Following variables are given to the child as well
+with the prefix `PTYBUFFER_`:
+
+`INFO`, `PPID`, `PID`, `PTY`, `CHILD`
+
 
 ## About
 

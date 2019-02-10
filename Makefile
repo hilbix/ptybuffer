@@ -1,7 +1,7 @@
 # Makefile automatically generated, do not edit!
 # This output (only this Makefile) is Public Domain.
 #
-#@MD5TINOIGN@ Creation date: Tue Dec 18 00:03:00 CET 2018
+#@MD5TINOIGN@ Creation date: Mon Dec 31 03:57:55 CET 2018
 #
 # This file is based on following files:
 #@MD5TINOIGN@ 1: Makefile.tino
@@ -112,7 +112,7 @@ Makefile:	Makefile.md5
 	$(TOUCH) Makefile
 
 Makefile.md5:	$(VERSIONFILE).$(VERSIONEXT) always
-	@$(GAWK) -vHERE="$(HERE)" -vMAKE="$(MAKE)" -vTINOCOPY="$(TINOCOPY)" 'BEGIN { \
+	@[ -z '$(HERE)' ] || $(GAWK) -vHERE="$(HERE)" -vMAKE="$(MAKE)" -vTINOCOPY="$(TINOCOPY)" 'BEGIN { \
 	if ((getline < "tino/Makefile")>0 && \
 	    (getline < "tino/Makefile.proto")>0 && \
 	    (getline < "tino/Makefile.awk")>-1) \
@@ -181,8 +181,8 @@ $(PROG2):	$(PROG2).o $(OBJS) $(LIBS)
 # included: ptybuffer.d
 $(PROG1).o:  ptybuffer.c tino/file.h tino/sysfix.h tino/sysfix_cygwin.h \
  tino/sysfix_diet.h tino/sysfix_linux.h tino/sysfix_osx.h tino/type.h \
- tino/debug.h tino/fatal.h tino/ex.h tino/arg.h tino/alloc.h tino/err.h \
- tino/fatal.h tino/debug.h tino/sock_select.h tino/sock.h tino/file.h \
+ tino/debug.h tino/fatal.h tino/ex.h tino/arg.h tino/alloc.h tino/debug.h \
+ tino/err.h tino/fatal.h tino/sock_select.h tino/sock.h tino/file.h \
  tino/alloc.h tino/threads.h tino/strprintf.h tino/str.h tino/syscap.h \
  tino/sock_select_old.h tino/slist.h tino/getopt.h tino/proc.h \
  tino/filetool.h tino/sock_tool.h tino/signals.h tino/assoc.h tino/tmp.h \
@@ -194,7 +194,7 @@ $(PROG2).o:  ptybufferconnect.c tino/file.h tino/sysfix.h \
  tino/sysfix_cygwin.h tino/sysfix_diet.h tino/sysfix_linux.h \
  tino/sysfix_osx.h tino/type.h tino/sockbuf.h tino/sock_select.h \
  tino/sock.h tino/file.h tino/fatal.h tino/ex.h tino/arg.h tino/alloc.h \
- tino/err.h tino/debug.h tino/threads.h tino/strprintf.h tino/str.h \
+ tino/debug.h tino/err.h tino/threads.h tino/strprintf.h tino/str.h \
  tino/syscap.h tino/sock_select_old.h tino/buf.h tino/codec.h \
  tino/getopt.h ptybuffer_version.h
 
