@@ -308,7 +308,8 @@ struct ptybuffer_connect
   {
     struct ptybuffer	*p;
     int			infill, discard;
-    unsigned long	lines, bytes, discards;
+    unsigned long	lines, discards;
+    unsigned long long	bytes;
     char		in[PTYBUFFER_MAX_INPUTLINE];
     int			outfill, outpos;
     char		out[BUFSIZ+BUFSIZ];
