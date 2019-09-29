@@ -1,6 +1,6 @@
 > THIS IS RELEASE EARLY CODE!  Maybe that the latest version introduces bugs.
 
-[![PtyBuffer Build Status](https://api.cirrus-ci.com/github/hilbix/ptybuffer.svg?branch=master)](https://cirrus-ci.com/github/hilbix/ptybuffer/master)
+[![PtyBuffer Build Status](https://api.cirrus-ci.com/github/hilbix/ptybuffer.svg?branch=dev)](https://cirrus-ci.com/github/hilbix/ptybuffer/dev)
 
 
 # ptybuffer
