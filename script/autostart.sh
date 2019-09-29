@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # This is an autostarter script for use with ptybuffer.
 # Run this from cron like:
@@ -7,6 +7,12 @@
 # Place all scripts to automatically start in following directory:
 #	mkdir "$HOME/autostart/"
 # Don't forget to give them exec rights.
+#
+# Option to ptybuffer can be given in the script name as follows:
+#	scriptname.-NT10Yhello_world-.sh
+# sets options -n 10 -t 10 -y 'hello_world'.
+# Letters L and O are special as they suppress the standard option
+# and letter Y must not be followed by uppercase letters.
 #
 # You can add softlinks to other directories containing
 # scripts to autostart as well into this directory.
@@ -45,6 +51,24 @@ echo "$lnow" >> "$RUNDIR/autostart.log"
 echo "$lnow"
 }
 
+# checks if $check matches -*$1*- sequence
+# if not, fail.  Else:
+# $rest becomes everything of the 2nd *
+# $n becomes the first number found in $rest
+check()
+{
+case "$check" in
+(-*"$1"*-)	;;
+(*)		return 1;;
+esac
+rest="${check##*"$1"}"
+rest="${rest%-}"
+n="${rest%%[0-9]*}"
+n="${rest#"$n"}"
+n="${n%%[^0-9]*}"
+return 0
+}
+
 ex=0
 for a in autostart/* autostart/*/*
 do
@@ -54,7 +78,23 @@ do
 	[ -f "$a" ] || continue
 	[ -x "$a" ] || continue
 	b="`basename "$a" .sh`"
-	ptybuffer -l "$RUNDIR/$b.log" -o "$RUNDIR/$b.out" -cf "$RUNDIR/$b.sock" "$a"
+	args=()
+	check="${b##*.}"
+	check A &&	args+=(-a)
+	check E &&	args+=(-e)
+	check G &&	args+=(-g)
+	check I &&	args+=(-i)
+	check K &&	args+=(-k)
+	check L ||	args+=(-l "$RUNDIR/$b.log")
+	check N &&	args+=(-n "${n:-1}")
+	check O ||	args+=(-o "$RUNDIR/$b.out")
+	check P &&	args+=(-p)
+	check Q &&	args+=(-q)
+	check T &&	args+=(-t "${n:-0}")
+	check U &&	args+=(-u "${n:-077}")
+	check W &&	args+=(-w)
+	check Y &&	args+=(-y "$rest")
+	ptybuffer "${args[@]}" -cf "$RUNDIR/$b.sock" "$a"
 	ret="$?"
 	case "$ret" in
 	0)	log "started $b" >&2; [ -z "$1" ] || sleep "$1";;
