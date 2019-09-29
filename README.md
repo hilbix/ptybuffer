@@ -16,8 +16,8 @@
 Example how to autostart and control processes in background:
 
 	mkdir -p ~/bin ~/autostart ~/autorun
-	cp scripts/autostart.sh ~/bin/
-	cp scripts/helloworld.sh ~/autostart/
+	cp script/autostart.sh ~/bin/
+	cp script/helloworld.sh ~/autostart/
 	cp autorun/helloworld.sh ~/autorun/
 	{ crontab -l; echo '* * * * * bin/autostart.sh >/dev/null'; } | crontab -
 	~/bin/autostart.sh
@@ -36,9 +36,10 @@ See also:
   autostarts: `watcher.py /var/tmp/autostart/$LOGNAME/*.sock` and
   in future it perhaps even can control them.
 
+
 ## Variables
 
-With option -a following variables are output:
+With option `-a` following variables are output:
 
 - `INFO` What was given to option `-y`
 - `PPID` process id of parent proces which forked ptybuffer
@@ -67,13 +68,13 @@ with the prefix `PTYBUFFER_`:
 
 `ptybuffer`
 
-- daemonizes.  With option -d it runs in foreground
+- daemonizes.  With option `-d` it runs in foreground
 
 - calls a process (arg2 and above) with a `PTY`.  Stdlib usually
   makes output line buffered this way.
 
 - gathers the output history of the pty for later view.  Currently
-  this is 1000 reads (not neccessarily lines, see option -n).
+  this is 1000 reads (not neccessarily lines, see option `-n`).
 
 - listens for connects to the unix socket (command line arg 1)
 
@@ -95,7 +96,7 @@ This is better than running background tasks using screen or tmux:
   the fact.
 
 - Concurrent access is no problem.  Lines are always sent as full lines.
-  (Except when option -i is used.)
+  (Except when option `-i` is used.)
 
 - History of output is clearly defined, not just something like a
   window.
@@ -120,11 +121,11 @@ This is better than running background tasks using screen or tmux:
 
 # Bugs
 
-- Very long lines are discarded.  Use option -i if this is a problem.
+- Very long lines are discarded.  Use option `-i` if this is a problem.
   Then, however, no line buffering is done, which might cause
   confusion if more than one input socket is open.
 
-- ptybuffer does not unlink() the socket if option -f and -c are
+- ptybuffer does not unlink() the socket if option `-f` and `-c` are
   missing.  This is a feature.
 
 - New version have not been tested much before release.
@@ -141,14 +142,51 @@ This is better than running background tasks using screen or tmux:
 
 # Example
 
-See introductory comment in test/test.sh
+See introductory comment in `test/test.sh`
 
-See scripts/autostart.sh with example scripts/helloworld.sh
+See `script/autostart.sh` with example `script/helloworld.sh`
 
-For a PHP usage example see the php/ subdirectory.
+For a PHP usage example see the `php/` subdirectory.
 
 You need a program capable to send data to unix sockets to control
 the program running in ptybuffer.  `socat` is your friend.
+
+
+## `script/autostart.sh`
+
+This is my way of autostarting things.
+Perhaps you want to use SystemD today, but this still does not solve the `PTY` problem.
+
+Using `autostart.sh` it is easy to quickly write interactive controllable background deamons from shell level.
+That's why it was done.  See `script/helloworld.sh` which runs `autorun/helloworld.sh`
+
+`autostart.sh` runs all scripts found in `~/autostart/*` and `~/autostart/*/*`.
+
+- `~/autostart/*/*` is meant for softlinks in `~/autostart/` to other projects which have such an `autostart` directory
+- `autostart.sh` is graceful if some softlink is pointing nowhere or unreadable scripts.
+- All scripts must be executable, if not, they are ignored
+- Dotfiles (`~/autostart/.*`) are ignored as usual for shell globbing
+  - This way you can create template-files easily, and softlink them to the real script
+    (with the usual  `$0` trick to change behavior).
+
+From v0.12.2 the script name can contain options to `ptybuffer`, such that you can
+use different settings for different scipts, too.  For this the script is named
+`scriptname.-*-.sh` or `scriptname.-*-` (which is intended to be unusual so it is
+unlikely that you ever used this.  Please do not forget the trailing `-`):
+
+- Options (which are usually lowercase) are encoded as uppercase letters in `-*-`
+  - All other uppercase letters are prohibited in this file part
+- This is hackish, so do not expect that this is graceful to accidents.
+  - It is not meant for filesystems which are case insensitive, sorry.
+- Option `-y` must come last and uses all what comes after it as the argument (excluding the trailing `-`).
+  - You cannot use uppercase here, as this would be seen as Option (I wrote: hackish)
+  - Example: `script.-LOYhello_world-.sh`
+- Options `-l` and `-o` are inverse options and suppress the `-l` and `-o` feature.
+- Options `-n`, `-t` and `-u` take a numeric parameter
+  - This is the next number sequence found after the first occurance of the parameter
+  - The number need not follow directly, it can be anywhere after.
+  - A missing number is treated as a certain default
+- For details please see `grep args script/autostart.sh`
 
 
 # DISCLAIMER
