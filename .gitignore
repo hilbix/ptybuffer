@@ -1,5 +1,4 @@
 *.d
 *.o
-ptybuffer_version.h
 ptybuffer
 ptybufferconnect
