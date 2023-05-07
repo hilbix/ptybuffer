@@ -43,7 +43,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef __OSX__
+#ifdef __APPLE__
 #include <util.h>	/* WTF?!?	*/
 #else
 #include <pty.h>
