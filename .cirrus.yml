@@ -1,5 +1,8 @@
-container:
-  image: gcc:latest
+matrix:
+  - macos_instance:
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+  - container:
+    image: gcc:latest
 
 make_task:
   prep_script: git submodule update --init --recursive
