@@ -2,8 +2,13 @@ task:
   matrix:
     - macos_instance:
         image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+      env:
+        SUDO: sudo
     - container:
         image: gcc:latest
+      env:
+        SUDO: ''
   prep_script: git submodule update --init --recursive
   compile_script: make
-  install_script: sudo make install
+  install_script: ${SUDO} make install
+
