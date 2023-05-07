@@ -43,8 +43,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#ifdef __OSX__
+#include <util.h>	/* WTF?!?	*/
+#else
 #include <pty.h>
-#include <utmp.h>
+#endif
 
 #include "ptybuffer_version.h"
 
