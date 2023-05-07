@@ -6,4 +6,4 @@ task:
         image: gcc:latest
   prep_script: git submodule update --init --recursive
   compile_script: make
-  install_script: make install
+  install_script: sudo make install
