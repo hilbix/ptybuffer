@@ -36,6 +36,11 @@ See also:
   autostarts: `watcher.py /var/tmp/autostart/$LOGNAME/*.sock` and
   in future it perhaps even can control them.
 
+- https://github.com/hilbix/unbuffered/ to create a very simple TCP chat:  
+  `./ptybuffer -adry'HELLO WORLD' :6666 bash -c 'stty raw -echo; while date; do unbuffered -nuc; done'`  
+  Warning: As shown above this is world reachable!  Test it with:  
+  `telnet localhost 6666`
+
 
 ## Variables
 

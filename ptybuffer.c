@@ -50,6 +50,7 @@
 
 static const char	*outfile, *logfile;
 static int		doecho, dotimestamp, doquiet, gaping;
+static int		remote_enabled;
 static pid_t		mypid;
 static TINO_ASSOC	jigs;
 static int		jigging;
@@ -832,6 +833,8 @@ do_check(const char *name)
 {
   int	fd;
 
+  if (remote_enabled)
+    return problem("sorry, option -c not implemented for option -r");	/* well, too lazy now to do this	*/
   tino_sock_error_fn	= tino_sock_error_fn_ignore;
   fd	= tino_sock_unix_connect(name);
   tino_sock_error_fn	= 0;
@@ -965,7 +968,6 @@ main(int argc, char **argv)
                       "i	immediate mode, send data to PTY, not broken up into lines.\n"
                       "		This allows lines longer than " __STR(PTYBUFFER_MAX_INPUTLINE) " bytes."
                       , &params.immediate,
-
 #if 0
                       TINO_GETOPT_FLAG
                       "j	support jigged names.  Replace {..} sequences with environment values\n"
@@ -974,7 +976,6 @@ main(int argc, char **argv)
                       "		PTYBUFFER_CHILD=PID of child\n"
                       , &jigging,
 #endif
-
                       TINO_GETOPT_FLAG
                       "k	kill incomplete lines on socket disconnect\n"
                       "		This was the old behavior of ptybuffer before 0.6.0.\n"
@@ -986,7 +987,7 @@ main(int argc, char **argv)
                       "		- log goes to stderr\n"
                       "		- child's stderr too (it is not connected to the pty then)"
                       , &logfile,
-
+/*m*/
                       TINO_GETOPT_MIN_PTR
                       TINO_GETOPT_LONGINT
                       TINO_GETOPT_DEFAULT
@@ -1009,6 +1010,11 @@ main(int argc, char **argv)
                       TINO_GETOPT_FLAG
                       "q	quiet operation (suppress start banners if no -l)"
                       , &doquiet,
+
+                      TINO_GETOPT_FLAG
+                      "r	allow remote connects\n"
+                      "		This binds to a TCP socket, not to a Unix Domain Socket"
+                      , &remote_enabled,
 
                       TINO_GETOPT_FLAG
                       "s	use stdin as first connected socket.\n"
@@ -1035,19 +1041,19 @@ main(int argc, char **argv)
                       omask,
                       0,
                       0777,
-
+/*v*/
                       TINO_GETOPT_FLAG
                       "w	wait for all connections to terminate before closing\n"
                       "		the main socket.\n"
                       "		Option -c then no more checks if command is alive."
                       , &params.keepopen,
-
+/*x*/
                       TINO_GETOPT_STRING
                       TINO_GETOPT_DEFAULT
                       "y info	Set PTYBUFFER_INFO variable to the given string"
                       , &info,
                       "",
-
+/*z*/
                       NULL
                       );
   xDP(("[argn=%d]", argn));
@@ -1128,10 +1134,19 @@ main(int argc, char **argv)
   sock	= 0;
   if (strcmp(argv[argn], "-"))
     {
-      if (force && argv[argn][0]!='@' && !tino_file_notsocketE(argv[argn]))
-        unlink(argv[argn]);
-      sock	= tino_sock_unix_listenAi(argv[argn]);
+      if (remote_enabled)
+        {
+	  sock	= tino_sock_tcp_listen(argv[argn]);
+        }
+      else
+        {
+          if (force && argv[argn][0]!='@' && !tino_file_notsocketE(argv[argn]))
+            unlink(argv[argn]);
+          sock	= tino_sock_unix_listenAi(argv[argn]);
+        }
     }
+  else if (remote_enabled)
+    problem("option -r makes no sense with STDIN");
   argn++;
   fd	= -1;	/* only to skip a warning */
   if (!foreground)	/* we want to do this here, before the fork() */
