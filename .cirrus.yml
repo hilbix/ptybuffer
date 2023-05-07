@@ -1,9 +1,9 @@
-make_task:
+task:
   matrix:
     - macos_instance:
-      image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+        image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
     - container:
-      image: gcc:latest
+        image: gcc:latest
   prep_script: git submodule update --init --recursive
   compile_script: make
   install_script: make install
