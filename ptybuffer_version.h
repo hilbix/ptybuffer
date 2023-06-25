@@ -1,1 +1,1 @@
-#define PTYBUFFER_VERSION "0.14.1"
+#define PTYBUFFER_VERSION "0.14.2"
