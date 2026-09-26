@@ -335,7 +335,7 @@ send_to_pty(struct ptybuffer_connect *c, int cnt)
     {
       xDP(("() add %.*s", (int)cnt, c->in));
       tino_glist_add_n(c->p->send, c->in, cnt);
-      tino_sock_pollOn(c->p->pty);
+      tino_sock_pollNn(c->p->pty);
 #if 0
       /* This is too dangerous.  If passwords are entered with
        * 'stty noecho', then they shall not be recorded.
@@ -773,7 +773,7 @@ sock_process(TINO_SOCK sock, enum tino_sock_proctype type)
           file_log("accept: returned error %s", strerror(errno));
           return -1;
         }
-      tino_sock_pollOn(ptybuffer_new_fd(p, fd));
+      tino_sock_pollNn(ptybuffer_new_fd(p, fd));
       break;
     }
   xDP(("sock_process() end"));
