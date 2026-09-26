@@ -282,6 +282,11 @@ parent(pid_t pid, int *fds)
   return -1;
 }
 
+struct ptybuffer_t			/* per connection telnet aux buffer	*/
+  {
+    char		out[BUFSIZ+BUFSIZ];
+  };
+
 struct ptybuffer_params
   {
     int			first_connect;	/* first connect (dupped stdin)	*/
@@ -292,6 +297,7 @@ struct ptybuffer_params
     int			umask;
     int			jigged;
     int			about;
+    int			telnet;		/* telnet mode: 0:no, 1:enabled, 2:debug	*/
   };
 struct ptybuffer
   {
@@ -304,9 +310,11 @@ struct ptybuffer
     const char		*out;
     long		history_length;
     long		history_tail;
-    int			immediate, kill_incomplete;
+    int			_immediate;	/* to not confuse with ptybuffer_connect.immediate	*/
+    int			kill_incomplete;
     int			keepopen;
     int			about;
+    int			_telnet;	/* to not confuse with ptybyffer_connect.telnet	*/
   };
 
 struct ptybuffer_connect
@@ -320,7 +328,19 @@ struct ptybuffer_connect
     char		out[BUFSIZ+BUFSIZ];
     long long		screenpos, screenbytes;
     long long		minscreenpos;
+    int			immediate;	/* BREAK or not			*/
+    int			telnet;		/* telnet mode enabled		*/
+    struct ptybuffer_t	*t;		/* telnet mode initialized	*/
   };
+
+static void
+input_processed(struct ptybuffer_connect *c, int cnt)
+{
+  xDP(("(%p,%d) max %d", c, cnt, (int)c->infill));
+  tino_FATAL(cnt>c->infill);
+  if ((c->infill-=cnt)>0)
+    memmove(c->in, c->in+cnt, c->infill);
+}
 
 static void
 send_to_pty(struct ptybuffer_connect *c, int cnt)
@@ -331,7 +351,7 @@ send_to_pty(struct ptybuffer_connect *c, int cnt)
   if (memchr(c->in, 0, cnt))
     c->discard	= 1;	/* line must not contain \0	*/
 #endif
-  if (!c->discard)
+  if (!c->discard)	/* line not too long	*/
     {
       xDP(("() add %.*s", (int)cnt, c->in));
       tino_glist_add_n(c->p->send, c->in, cnt);
@@ -345,8 +365,7 @@ send_to_pty(struct ptybuffer_connect *c, int cnt)
 #endif
     }
   c->discard	= 0;
-  if ((c->infill-=cnt)>0)
-    memmove(c->in, c->in+cnt, c->infill);
+  input_processed(c, cnt);
 }
 
 static void
@@ -367,6 +386,111 @@ send_to_conn(struct ptybuffer_connect *c, const char *s, ...)
   c->outfill	+= cnt;
 }
 
+#define	T_IAC	(char)255	/* first character	*/
+#define	T_DONT	(char)254
+#define	T_DO	(char)253
+#define	T_WONT	(char)252
+#define	T_WILL	(char)251
+#define	T_SB	(char)250	/* subnegotiation	*/
+#define	T_GA	(char)249	/* go ahead	*/
+#define	T_EL	(char)248	/* erase line	*/
+#define	T_EC	(char)247	/* erase char	*/
+#define	T_AYT	(char)246	/* are you there	*/
+#define	T_AO	(char)245	/* abort output without interruption	*/
+#define	T_IP	(char)244	/* suspend, interrupt, abort, terminate	*/
+#define	T_BRK	(char)243	/* send Break-Signal (serial)	*/
+#define	T_DM	(char)242	/* data mark (synch)	*/
+#define	T_NOP	(char)241	/* noop	*/
+#define	T_SE	(char)240	/* end of SB	*/
+
+enum telnet_opt		/* according to https://www.iana.org/assignments/telnet-options/telnet-options.xhtml	*/
+  { T_BIN		/* Binary Transmission 	[RFC856]	*/
+  , T_ECHO		/* Echo 	[RFC857]	*/
+  , T_RECONN		/* Reconnection 	[NIC 15391 of 1973]	*/
+  , T_NO_GA		/* Suppress Go Ahead 	[RFC858]	*/
+  , T_APPROX		/* Approx Message Size Negotiation 	[NIC 15393 of 1973]	*/
+  , T_STATUS		/* Status 	[RFC859]	*/
+  , T_TIMARK		/* Timing Mark 	[RFC860]	*/
+  , TR_CTE		/* Remote Controlled Trans and Echo 	[RFC726]	*/
+  , TO_LW		/* Output Line Width 	[NIC 20196 of August 1978]	*/
+  , TO_PS		/* Output Page Size 	[NIC 20197 of August 1978]	*/
+  , TO_CRD		/* Output Carriage-Return Disposition 	[RFC652]	*/
+  , TO_HTS		/* Output Horizontal Tab Stops 	[RFC653]	*/
+  , TO_HTD		/* Output Horizontal Tab Disposition 	[RFC654]	*/
+  , TO_FFD		/* Output Formfeed Disposition 	[RFC655]	*/
+  , TO_VTS		/* Output Vertical Tabstops 	[RFC656]	*/
+  , TO_VTD		/* Output Vertical Tab Disposition 	[RFC657]	*/
+  , TO_LFD		/* Output Linefeed Disposition 	[RFC658]	*/
+  , T_EASCII		/* Extended ASCII 	[RFC698]	*/
+  , T_LOGOUT		/* Logout 	[RFC727]	*/
+  , T_BMACRO		/* Byte Macro 	[RFC735]	*/
+  , T_DET		/* Data Entry Terminal 	[RFC1043][RFC732]	*/
+  , T_SUPDUP		/* SUPDUP 	[RFC736][RFC734]	*/
+  , TP_SUPDUP		/* SUPDUP Output 	[RFC749]	*/
+  , T_LOC		/* Send Location 	[RFC779]	*/
+  , T_TTYPE		/* Terminal Type 	[RFC1091]	*/
+  , T_EOR		/* End of Record 	[RFC885]	*/
+  , T_TACACS		/* TACACS User Identification 	[RFC927]	*/
+  , TO_MARK		/* Output Marking 	[RFC933]	*/
+  , T_TNR		/* Terminal Location Number 	[RFC946]	*/
+  , T_REGIME		/* Telnet 3270 Regime 	[RFC1041]	*/
+  , T_PAD		/* X.3 PAD 	[RFC1053]	*/
+  , T_NAWS		/* Negotiate About Window Size 	[RFC1073]	*/
+  , T_TSPEED		/* Terminal Speed 	[RFC1079]	*/
+  , TR_FLOW		/* Remote Flow Control 	[RFC1372]	*/
+  , T_LINE		/* Linemode 	[RFC1184]	*/
+  , TX_DISP		/* X Display Location 	[RFC1096]	*/
+  , T_ENV		/* Environment Option 	[RFC1408]	*/
+  , T_AUTH		/* Authentication Option 	[RFC2941]	*/
+  , T_CRYPT		/* Encryption Option 	[RFC2946]	*/
+  , T_NEVN		/* New Environment Option 	[RFC1572]	*/
+  , T_N3270E		/* TN3270E 	[RFC2355]	*/
+  , TX_AUTH		/* XAUTH 	[Rob_Earhart]	*/
+  , T_CHARSET		/* CHARSET 	[RFC2066]	*/
+  , T_RSP		/* Telnet Remote Serial Port (RSP) 	[Robert_Barnes]	*/
+  , T_COM		/* Com Port Control Option 	[RFC2217]	*/
+  , T_SLE		/* Telnet Suppress Local Echo 	[Wirt_Atmar]	*/
+  , T_STARTTLS		/* Telnet Start TLS 	[Michael_Boe]	*/
+  , T_KERMIT		/* KERMIT 	[RFC2840]	*/
+  , T_URL		/* SEND-URL 	[David_Croft]	*/
+  , TX_FORWARD		/* FORWARD_X 	[Jeffrey_Altman]	*/
+#if 0
+  , 138 		/* TELOPT PRAGMA LOGON 	[Steve_McGregory]	*/
+  , 139 		/* TELOPT SSPI LOGON 	[Steve_McGregory]	*/
+  , 140 		/* TELOPT PRAGMA HEARTBEAT 	[Steve_McGregory]	*/
+#endif
+  };
+
+/* NOT THREADSAFE!	*/
+static int
+process_telnet(struct ptybuffer_connect *c)
+{
+  int		i;
+
+  if (!c->t)					/* test the first incoming character is IAC	*/
+    {
+      tino_FATAL(c->telnet <= 0);
+      if (c->in[0] != T_IAC)
+        return c->telnet = 0;			/* switch into normal mode	*/
+
+      c->t	= tino_alloc0O(sizeof *c->t);	/* initialize telnet mode	*/
+    }
+
+  /* process telnet input	*/
+  for (i=0; i<c->infill; i++)
+    {
+      if (c->in[i] == T_IAC)
+        {
+        }
+
+      /* process data in telnet mode	*/
+      if (c->immediate)
+        {
+        }
+    }
+  return 0;	/* for now */
+  return 1;	/* noting left in input buffer	*/
+}
 
 /* Handle data to a connected socket:
  * Send incoming to terminal,
@@ -458,7 +582,9 @@ connect_process(TINO_SOCK sock, enum tino_sock_proctype type)
       c->infill	+= got;
       c->bytes	+= got;
 
-      if (c->p->immediate)
+      if (c->telnet && process_telnet(c))
+        return got;
+      if (c->immediate)
         send_to_pty(c, c->infill);
       else
         {
@@ -717,6 +843,7 @@ ptybuffer_new_fd(struct ptybuffer *p, int fd)
 
   buf		= tino_alloc0O(sizeof *buf);
   buf->p	= p;
+  buf->telnet	= p->_telnet;
   if (p->history_tail>=0 && p->blockcount>p->history_tail)
     buf->minscreenpos	= p->blockcount-p->history_tail;
   sock		= tino_sock_new_fdANn(fd, connect_process, buf);
@@ -801,10 +928,11 @@ daemonloop(int sock, int master, struct ptybuffer_params *params)
 
   work.history_length	= params->history_length<=0 ? 1000 : params->history_length;
   work.history_tail	= params->history_tail;
-  work.immediate	= params->immediate;
+  work._immediate	= params->immediate;
   work.kill_incomplete	= params->kill_incomplete;
   work.keepopen		= params->keepopen;
   work.about		= params->about;
+  work._telnet		= params->telnet;
 
   /* Treat stdin as the first connect?
    * This is also set if sock==0 (see main())
@@ -1050,7 +1178,14 @@ main(int argc, char **argv)
                       "		the main socket.\n"
                       "		Option -c then no more checks if command is alive."
                       , &params.keepopen,
-/*x*/
+
+                      TINO_GETOPT_FLAG
+                      TINO_GETOPT_MAX
+                      "x	speak telnet protocol (somewhat incomplete)\n"
+                      "		give a second time to debug communication"
+                      , &params.telnet,
+                      2,
+
                       TINO_GETOPT_STRING
                       TINO_GETOPT_DEFAULT
                       "y info	Set PTYBUFFER_INFO variable to the given string"
@@ -1139,7 +1274,7 @@ main(int argc, char **argv)
     {
       if (remote_enabled)
         {
-	  sock	= tino_sock_tcp_listen(argv[argn]);
+          sock	= tino_sock_tcp_listen(argv[argn]);
         }
       else
         {
